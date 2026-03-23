@@ -1,6 +1,7 @@
 import { useGetDashboardSummary } from "@workspace/api-client-react";
 import { formatCurrency } from "@/lib/utils";
 import { StatusBadge } from "@/components/status-badge";
+import { BillerIcon } from "@/components/biller-icon";
 import { Wallet, TrendingUp, AlertTriangle, ArrowRight, ShieldCheck, CreditCard } from "lucide-react";
 import { Link } from "wouter";
 import { format, parseISO } from "date-fns";
@@ -103,9 +104,11 @@ export default function Dashboard() {
             summary.upcomingBills.map((bill) => (
               <div key={bill.id} className="p-4 hover:bg-white/[0.02] transition-colors flex items-center justify-between group">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex items-center justify-center shadow-inner text-xl font-bold text-white/80">
-                    {bill.biller?.icon || bill.biller?.name.charAt(0)}
-                  </div>
+                  <BillerIcon
+                    icon={bill.biller?.icon}
+                    category={bill.biller?.category}
+                    name={bill.biller?.name ?? ""}
+                  />
                   <div>
                     <p className="font-semibold text-white group-hover:text-primary transition-colors">{bill.biller?.name}</p>
                     <p className="text-sm text-muted-foreground flex items-center gap-2">
