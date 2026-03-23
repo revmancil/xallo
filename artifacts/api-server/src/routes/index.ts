@@ -7,6 +7,9 @@ import incomeRouter from "./income";
 import accountsRouter from "./accounts";
 import dashboardRouter from "./dashboard";
 import plaidRouter from "./plaid";
+import analyticsRouter from "./analytics";
+import securityLogRouter from "./security-log";
+import pdfUploadRouter from "./pdf-upload";
 
 const router: IRouter = Router();
 
@@ -18,5 +21,8 @@ router.use(incomeRouter);
 router.use(accountsRouter);
 router.use(dashboardRouter);
 router.use(plaidRouter);
+router.use(analyticsRouter);
+router.use(securityLogRouter);
+router.use(pdfUploadRouter);
 
 export default router;

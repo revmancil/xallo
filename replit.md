@@ -48,6 +48,8 @@ artifacts-monorepo/
 - **income_entries** — Payday/income records
 - **bank_accounts** — Bank account balances (manual or auto-imported via Plaid)
 - **plaid_items** — Stored Plaid access tokens per user/institution
+- **security_logs** — Security audit log (IP, action, metadata, timestamp)
+- **user_2fa** — TOTP 2FA secrets per user (AES-256-GCM encrypted)
 
 ## Features
 
@@ -57,6 +59,9 @@ artifacts-monorepo/
 - **Billers**: CRUD management of biller templates
 - **Income**: Payday tracking with recurrence support
 - **Accounts**: Bank account balance management + **Plaid integration** (Link Account button, token exchange, depository account import)
+- **Analytics**: 6-month spending bar chart (Recharts), Top 5 Billers by spend, Subscription Watcher (flags >10% month-over-month price changes)
+- **Security**: Audit Log table (action/IP/timestamp), TOTP 2FA setup (speakeasy + QR code), PDF Bill Scanner (multer + pdf-parse extracts amount & due date)
+- **AES-256-GCM Encryption**: Plaid tokens and 2FA secrets encrypted at rest via `lib/encryption.ts`
 - **Notification Bell**: Smart in-app alerts — Bill Due Today/Tomorrow, Overdue Bills, Low Balance Warning (Safety Gap < $200)
 - **Demo Mode**: Pre-seeded data for guest users (userId = "demo")
 - **Auth**: Replit Auth login — users get their own data when authenticated
@@ -110,9 +115,25 @@ Plaid routes (no codegen — called via raw fetch in frontend):
 - `GET /api/plaid/liabilities`
 - `GET /api/plaid/transactions`
 
+Analytics routes (no codegen):
+- `GET /api/analytics/monthly` — 6-month bill spending totals
+- `GET /api/analytics/subscription-changes` — month-over-month biller price changes
+- `GET /api/analytics/summary` — this month summary + top 5 billers
+
+Security routes (no codegen):
+- `GET /api/security/logs` — user audit log
+- `POST /api/security/log` — log a custom event
+- `GET /api/security/2fa/status` — check if 2FA enabled
+- `POST /api/security/2fa/setup` — generate TOTP secret + QR code
+- `POST /api/security/2fa/verify` — verify token, enable 2FA
+- `POST /api/security/2fa/disable` — disable 2FA
+- `POST /api/pdf/parse` — parse PDF bill (multipart/form-data, field: `file`)
+
+Packages installed in api-server: plaid, multer, speakeasy, qrcode, pdf-parse@1.1.1 (+ @types)
+
 ### `artifacts/prism-clone` (`@workspace/prism-clone`)
 
-React + Vite frontend at `/` (root path). Pages: Dashboard, Bills, Calendar, Billers, Income, Accounts.
+React + Vite frontend at `/` (root path). Pages: Dashboard, Bills, Calendar, Billers, Income, Accounts, Analytics, Security.
 
 ### `lib/db` (`@workspace/db`)
 

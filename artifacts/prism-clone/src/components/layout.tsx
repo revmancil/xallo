@@ -8,6 +8,8 @@ import {
   Users, 
   Wallet, 
   Landmark,
+  BarChart2,
+  Shield,
   LogOut,
   LogIn
 } from "lucide-react";
@@ -22,7 +24,11 @@ const navItems = [
   { href: "/billers", label: "Billers", icon: Users },
   { href: "/income", label: "Income", icon: Wallet },
   { href: "/accounts", label: "Accounts", icon: Landmark },
+  { href: "/analytics", label: "Analytics", icon: BarChart2 },
+  { href: "/security", label: "Security", icon: Shield },
 ];
+
+const mobileNavItems = navItems.slice(0, 6);
 
 export default function Layout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
@@ -133,7 +139,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-xl border-t border-white/10 z-50 px-2 pb-safe">
         <div className="flex items-center justify-between p-2">
-          {navItems.map((item) => {
+          {mobileNavItems.map((item) => {
             const isActive = location === item.href;
             return (
               <Link 

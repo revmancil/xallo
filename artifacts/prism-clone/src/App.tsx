@@ -9,6 +9,8 @@ import Calendar from "./pages/calendar";
 import Billers from "./pages/billers";
 import Income from "./pages/income";
 import Accounts from "./pages/accounts";
+import Analytics from "./pages/analytics";
+import Security from "./pages/security";
 import NotFound from "./pages/not-found";
 
 const queryClient = new QueryClient({
@@ -29,6 +31,8 @@ function Router() {
       <Route path="/billers" component={Billers} />
       <Route path="/income" component={Income} />
       <Route path="/accounts" component={Accounts} />
+      <Route path="/analytics" component={Analytics} />
+      <Route path="/security" component={Security} />
       <Route component={NotFound} />
     </Switch>
   );

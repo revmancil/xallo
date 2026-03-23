@@ -58,6 +58,7 @@ async function buildAll() {
       "@tensorflow/*",
       "@prisma/client",
       "@mikro-orm/*",
+      "multer",
       "@grpc/*",
       "@swc/*",
       "@aws-sdk/*",
