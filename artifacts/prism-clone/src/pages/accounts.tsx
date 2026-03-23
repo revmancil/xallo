@@ -77,57 +77,60 @@ function PlaidLinkSection({ onSuccess }: { onSuccess: () => void }) {
   }, [status, plaidReady, linkToken, openPlaid]);
 
   return (
-    <div className="glass-panel rounded-2xl p-6 border border-blue-500/10">
-      <div className="flex items-start gap-4">
-        <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0">
-          <Link2 className="w-6 h-6" />
+    <div className="glass-panel rounded-2xl border border-blue-500/10 overflow-hidden">
+      <div className="flex items-center gap-4 p-4">
+        <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0">
+          <Link2 className="w-5 h-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-white text-lg mb-1">Connect with Plaid</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Link your real bank accounts to automatically sync balances, import checking accounts, and pull credit card due dates and statements.
+          <p className="font-bold text-white text-sm">Connect with Plaid</p>
+          <p className="text-xs text-muted-foreground leading-snug">
+            Sync real bank balances, credit card due dates &amp; discover recurring bills automatically.
           </p>
-
-          {linkedMsg && (
-            <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mb-4 text-sm text-emerald-300">
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
-              {linkedMsg}
-            </div>
-          )}
-
-          {status === "error" && errorMsg && (
-            <div className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl mb-4 text-sm text-rose-300">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              {errorMsg}
-            </div>
-          )}
-
-          {status === "unconfigured" ? (
-            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-              <p className="text-sm font-semibold text-amber-300 mb-1">Setup Required</p>
-              <p className="text-xs text-amber-200/70 leading-relaxed">
-                Set <code className="bg-black/20 px-1 rounded">PLAID_CLIENT_ID</code> and{" "}
-                <code className="bg-black/20 px-1 rounded">PLAID_SECRET</code> environment variables to activate Plaid. Get free sandbox credentials at{" "}
-                <a href="https://dashboard.plaid.com/signup" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-200">
-                  dashboard.plaid.com
-                </a>.
-              </p>
-            </div>
-          ) : (
-            <button
-              onClick={fetchLinkToken}
-              disabled={status === "loading" || status === "ready" || linking}
-              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold text-sm shadow-lg shadow-blue-500/20 transition-all"
-            >
-              {(status === "loading" || linking) ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Connecting…</>
-              ) : (
-                <><Link2 className="w-4 h-4" /> Link Bank Account</>
-              )}
-            </button>
-          )}
         </div>
+        {status === "unconfigured" ? (
+          <span className="shrink-0 text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg">
+            Setup Required
+          </span>
+        ) : (
+          <button
+            onClick={fetchLinkToken}
+            disabled={status === "loading" || status === "ready" || linking}
+            className="shrink-0 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold text-sm shadow-lg shadow-blue-500/20 transition-all"
+          >
+            {(status === "loading" || linking) ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Connecting…</>
+            ) : (
+              <><Link2 className="w-4 h-4" /> Link Account</>
+            )}
+          </button>
+        )}
       </div>
+
+      {linkedMsg && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-emerald-500/10 border-t border-emerald-500/20 text-sm text-emerald-300">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          {linkedMsg}
+        </div>
+      )}
+
+      {status === "error" && errorMsg && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-rose-500/10 border-t border-rose-500/20 text-sm text-rose-300">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          {errorMsg}
+        </div>
+      )}
+
+      {status === "unconfigured" && (
+        <div className="px-4 py-3 bg-amber-500/5 border-t border-amber-500/15 text-xs text-amber-200/60">
+          Set <code className="bg-black/20 px-1 rounded">PLAID_CLIENT_ID</code> &amp;{" "}
+          <code className="bg-black/20 px-1 rounded">PLAID_SECRET</code> env vars.{" "}
+          Free sandbox at{" "}
+          <a href="https://dashboard.plaid.com/signup" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-200">
+            dashboard.plaid.com
+          </a>.
+        </div>
+      )}
     </div>
   );
 }
@@ -167,7 +170,7 @@ export default function Accounts() {
   const totalBalance = accounts?.reduce((sum, acc) => sum + toNumber(acc.balance), 0) || 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-display font-bold text-gradient mb-2">Bank Accounts</h1>

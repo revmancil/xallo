@@ -122,7 +122,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="max-w-6xl mx-auto h-full"
+              className="max-w-6xl mx-auto"
             >
               {children}
             </motion.div>
