@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useGetBillers, useCreateBiller, useDeleteBiller } from "@workspace/api-client-react";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Trash2, Globe, Building2, LayoutGrid } from "lucide-react";
+import { Plus, Trash2, Globe, LayoutGrid } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetBillersQueryKey } from "@workspace/api-client-react";
+import { BillerIcon } from "@/components/biller-icon";
+
 
 export default function Billers() {
   const { data: billers, isLoading } = useGetBillers();
@@ -34,7 +36,7 @@ export default function Billers() {
         category: fd.get("category") as string,
         recurrence: fd.get("recurrence") as "monthly",
         typicalAmount: Number(fd.get("typicalAmount")) || undefined,
-        websiteUrl: fd.get("websiteUrl") as string,
+        websiteUrl: fd.get("websiteUrl") as string || undefined,
       }
     });
   };
@@ -46,7 +48,7 @@ export default function Billers() {
           <h1 className="text-3xl font-display font-bold text-gradient mb-2">Billers</h1>
           <p className="text-muted-foreground">Manage the companies and people you pay.</p>
         </div>
-        <button 
+        <button
           onClick={() => setIsAdding(!isAdding)}
           className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold shadow-lg shadow-primary/25 flex items-center gap-2 transition-all"
         >
@@ -64,7 +66,11 @@ export default function Billers() {
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium text-white/80">Category *</label>
-              <input name="category" required className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary" placeholder="e.g. Utilities" />
+              <select name="category" required className="w-full bg-[#0d1117] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary">
+                <option value="">Select category</option>
+                {Object.keys(CATEGORY_COLORS).map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="Other">Other</option>
+              </select>
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium text-white/80">Typical Amount</label>
@@ -72,7 +78,7 @@ export default function Billers() {
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium text-white/80">Recurrence *</label>
-              <select name="recurrence" className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary">
+              <select name="recurrence" className="w-full bg-[#0d1117] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary">
                 <option value="monthly">Monthly</option>
                 <option value="biweekly">Bi-weekly</option>
                 <option value="weekly">Weekly</option>
@@ -93,39 +99,37 @@ export default function Billers() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading ? (
-           [1,2,3].map(i => <div key={i} className="h-40 bg-white/5 rounded-2xl animate-pulse" />)
+          [1, 2, 3].map(i => <div key={i} className="h-40 bg-white/5 rounded-2xl animate-pulse" />)
         ) : billers?.map(biller => (
-          <div key={biller.id} className="glass-panel p-6 rounded-2xl relative group">
+          <div key={biller.id} className="glass-panel p-6 rounded-2xl relative group hover:border-white/20 transition-colors">
             <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
-                <Building2 className="w-6 h-6 text-indigo-400" />
-              </div>
-              <button 
+              <BillerIcon icon={biller.icon} category={biller.category} name={biller.name} />
+              <button
                 onClick={() => deleteMutation.mutate({ billerId: biller.id })}
                 className="p-2 text-white/30 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
-            
+
             <h3 className="font-bold text-xl text-white mb-1">{biller.name}</h3>
-            
-            <div className="space-y-2 mt-4 text-sm text-muted-foreground">
+
+            <div className="space-y-2 mt-3 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
-                <LayoutGrid className="w-4 h-4 text-white/50" />
+                <LayoutGrid className="w-4 h-4 text-white/40" />
                 <span>{biller.category}</span>
               </div>
-              {biller.typicalAmount && (
+              {biller.typicalAmount != null && (
                 <div className="flex items-center gap-2 text-white/90">
                   <span className="font-semibold text-emerald-400">{formatCurrency(biller.typicalAmount)}</span>
-                  <span className="text-xs px-2 py-0.5 bg-white/10 rounded-full">{biller.recurrence}</span>
+                  <span className="text-xs px-2 py-0.5 bg-white/10 rounded-full capitalize">{biller.recurrence}</span>
                 </div>
               )}
               {biller.websiteUrl && (
                 <div className="flex items-center gap-2 mt-2">
                   <Globe className="w-4 h-4 text-blue-400" />
                   <a href={biller.websiteUrl} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline truncate">
-                    {new URL(biller.websiteUrl).hostname}
+                    {(() => { try { return new URL(biller.websiteUrl).hostname; } catch { return biller.websiteUrl; } })()}
                   </a>
                 </div>
               )}

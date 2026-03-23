@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useGetBillInstances, useUpdateBillInstance } from "@workspace/api-client-react";
 import { formatCurrency } from "@/lib/utils";
 import { StatusBadge } from "@/components/status-badge";
+import { BillerIcon } from "@/components/biller-icon";
 import { format, parseISO } from "date-fns";
-import { CheckCircle2, ChevronDown } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetBillInstancesQueryKey, getGetDashboardSummaryQueryKey } from "@workspace/api-client-react";
 
@@ -72,9 +73,12 @@ export default function Bills() {
             filteredBills.map((bill) => (
               <div key={bill.id} className="glass-panel p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center text-2xl shadow-inner">
-                    {bill.biller?.icon || bill.biller?.name.charAt(0)}
-                  </div>
+                  <BillerIcon
+                    icon={bill.biller?.icon}
+                    category={bill.biller?.category}
+                    name={bill.biller?.name ?? ""}
+                    size="lg"
+                  />
                   <div>
                     <h3 className="font-bold text-lg text-white group-hover:text-primary transition-colors">
                       {bill.biller?.name}

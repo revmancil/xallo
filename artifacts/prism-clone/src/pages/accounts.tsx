@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useGetAccounts, useCreateAccount } from "@workspace/api-client-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, toNumber } from "@/lib/utils";
 import { Plus, Landmark, CreditCard, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetAccountsQueryKey, getGetDashboardSummaryQueryKey } from "@workspace/api-client-react";
@@ -32,7 +32,7 @@ export default function Accounts() {
     });
   };
 
-  const totalBalance = accounts?.reduce((sum, acc) => sum + acc.balance, 0) || 0;
+  const totalBalance = accounts?.reduce((sum, acc) => sum + toNumber(acc.balance), 0) || 0;
 
   return (
     <div className="space-y-6">
