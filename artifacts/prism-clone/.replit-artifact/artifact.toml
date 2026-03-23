@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "PrismClone - Bill Dashboard"
+version = "1.0.0"
+id = "artifacts/prism-clone"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25101
+
+[services.development]
+run = "pnpm --filter @workspace/prism-clone run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/prism-clone", "run", "build" ]
+publicDir = "artifacts/prism-clone/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25101"
+BASE_PATH = "/"

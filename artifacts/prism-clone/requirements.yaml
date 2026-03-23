@@ -1,0 +1,16 @@
+packages:
+  "framer-motion": "For smooth page transitions and micro-interactions"
+  "date-fns": "For calendar generation and robust date formatting"
+  "clsx": "For conditional class name merging"
+  "tailwind-merge": "For resolving Tailwind class conflicts"
+  "recharts": "For visual charts on the dashboard"
+
+images:
+  - path: "artifacts/prism-clone/public/images/fintech-bg.png"
+    description: "Abstract dark background with deep navy and subtle glowing teal and emerald geometric lines, representing data flow and secure fintech environment."
+    aspect_ratio: "16:9"
+
+notes:
+  - Using Replit Auth via @workspace/replit-auth-web for authentication.
+  - Relying on existing React Query hooks exported from @workspace/api-client-react.
+  - UI defaults to a Demo Mode gracefully rendering data if unauthenticated, assuming backend provides seed data.

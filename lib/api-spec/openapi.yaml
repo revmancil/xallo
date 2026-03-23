@@ -3,13 +3,23 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: PrismClone Bill Management API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: billers
+    description: Biller management
+  - name: bills
+    description: Bill instance management
+  - name: income
+    description: Income / payday management
+  - name: accounts
+    description: Bank account management
 paths:
   /healthz:
     get:
@@ -24,6 +34,341 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/user:
+    get:
+      operationId: getCurrentAuthUser
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user or unauthenticated state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetCurrentAuthUserResponse"
+
+  /billers:
+    get:
+      operationId: getBillers
+      tags: [billers]
+      summary: List all billers for current user
+      responses:
+        "200":
+          description: List of billers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Biller"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createBiller
+      tags: [billers]
+      summary: Create a new biller
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBillerBody"
+      responses:
+        "201":
+          description: Created biller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Biller"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /billers/{billerId}:
+    put:
+      operationId: updateBiller
+      tags: [billers]
+      summary: Update a biller
+      parameters:
+        - name: billerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBillerBody"
+      responses:
+        "200":
+          description: Updated biller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Biller"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteBiller
+      tags: [billers]
+      summary: Delete a biller
+      parameters:
+        - name: billerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bills:
+    get:
+      operationId: getBillInstances
+      tags: [bills]
+      summary: List bill instances for current user
+      parameters:
+        - name: month
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: year
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of bill instances
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BillInstance"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createBillInstance
+      tags: [bills]
+      summary: Create a new bill instance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBillInstanceBody"
+      responses:
+        "201":
+          description: Created bill instance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillInstance"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bills/{billId}:
+    put:
+      operationId: updateBillInstance
+      tags: [bills]
+      summary: Update a bill instance (e.g., mark as paid)
+      parameters:
+        - name: billId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBillInstanceBody"
+      responses:
+        "200":
+          description: Updated bill instance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillInstance"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteBillInstance
+      tags: [bills]
+      summary: Delete a bill instance
+      parameters:
+        - name: billId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /income:
+    get:
+      operationId: getIncomeEntries
+      tags: [income]
+      summary: List income/payday entries for current user
+      responses:
+        "200":
+          description: List of income entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IncomeEntry"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createIncomeEntry
+      tags: [income]
+      summary: Create income/payday entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIncomeEntryBody"
+      responses:
+        "201":
+          description: Created income entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncomeEntry"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /income/{incomeId}:
+    delete:
+      operationId: deleteIncomeEntry
+      tags: [income]
+      summary: Delete income entry
+      parameters:
+        - name: incomeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /accounts:
+    get:
+      operationId: getAccounts
+      tags: [accounts]
+      summary: Get bank accounts for current user
+      responses:
+        "200":
+          description: List of bank accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BankAccount"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createAccount
+      tags: [accounts]
+      summary: Create or update bank account balance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAccountBody"
+      responses:
+        "201":
+          description: Created account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankAccount"
+
+  /dashboard:
+    get:
+      operationId: getDashboardSummary
+      tags: [billers]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +379,353 @@ components:
       required:
         - status
 
+    GetCurrentAuthUserResponse:
+      type: object
+      properties:
+        authenticated:
+          type: boolean
+        user:
+          $ref: "#/components/schemas/AuthUser"
+      required:
+        - authenticated
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        profileImage:
+          type: string
+        email:
+          type: string
+      required:
+        - id
+
+    Biller:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        websiteUrl:
+          type: string
+          nullable: true
+        typicalAmount:
+          type: number
+          nullable: true
+        dueDayOfMonth:
+          type: integer
+          nullable: true
+        recurrence:
+          type: string
+          enum: [monthly, biweekly, weekly, one-time]
+        color:
+          type: string
+          nullable: true
+        icon:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - name
+        - category
+        - recurrence
+        - createdAt
+
+    CreateBillerBody:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        websiteUrl:
+          type: string
+          nullable: true
+        typicalAmount:
+          type: number
+          nullable: true
+        dueDayOfMonth:
+          type: integer
+          nullable: true
+        recurrence:
+          type: string
+          enum: [monthly, biweekly, weekly, one-time]
+        color:
+          type: string
+          nullable: true
+        icon:
+          type: string
+          nullable: true
+      required:
+        - name
+        - category
+        - recurrence
+
+    UpdateBillerBody:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        websiteUrl:
+          type: string
+          nullable: true
+        typicalAmount:
+          type: number
+          nullable: true
+        dueDayOfMonth:
+          type: integer
+          nullable: true
+        recurrence:
+          type: string
+          enum: [monthly, biweekly, weekly, one-time]
+        color:
+          type: string
+          nullable: true
+        icon:
+          type: string
+          nullable: true
+
+    BillInstance:
+      type: object
+      properties:
+        id:
+          type: integer
+        billerId:
+          type: integer
+        userId:
+          type: string
+        amountDue:
+          type: number
+        dueDate:
+          type: string
+        status:
+          type: string
+          enum: [unpaid, paid, scheduled, overdue]
+        confirmationNumber:
+          type: string
+          nullable: true
+        paidAt:
+          type: string
+          nullable: true
+        biller:
+          $ref: "#/components/schemas/Biller"
+        createdAt:
+          type: string
+      required:
+        - id
+        - billerId
+        - userId
+        - amountDue
+        - dueDate
+        - status
+        - createdAt
+
+    CreateBillInstanceBody:
+      type: object
+      properties:
+        billerId:
+          type: integer
+        amountDue:
+          type: number
+        dueDate:
+          type: string
+        status:
+          type: string
+          enum: [unpaid, paid, scheduled, overdue]
+        confirmationNumber:
+          type: string
+          nullable: true
+      required:
+        - billerId
+        - amountDue
+        - dueDate
+        - status
+
+    UpdateBillInstanceBody:
+      type: object
+      properties:
+        amountDue:
+          type: number
+        dueDate:
+          type: string
+        status:
+          type: string
+          enum: [unpaid, paid, scheduled, overdue]
+        confirmationNumber:
+          type: string
+          nullable: true
+        paidAt:
+          type: string
+          nullable: true
+
+    IncomeEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        label:
+          type: string
+        amount:
+          type: number
+        payDate:
+          type: string
+        recurrence:
+          type: string
+          enum: [weekly, biweekly, monthly, one-time]
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - label
+        - amount
+        - payDate
+        - recurrence
+        - createdAt
+
+    CreateIncomeEntryBody:
+      type: object
+      properties:
+        label:
+          type: string
+        amount:
+          type: number
+        payDate:
+          type: string
+        recurrence:
+          type: string
+          enum: [weekly, biweekly, monthly, one-time]
+      required:
+        - label
+        - amount
+        - payDate
+        - recurrence
+
+    BankAccount:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        name:
+          type: string
+        balance:
+          type: number
+        institution:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+      required:
+        - id
+        - userId
+        - name
+        - balance
+        - updatedAt
+
+    CreateAccountBody:
+      type: object
+      properties:
+        name:
+          type: string
+        balance:
+          type: number
+        institution:
+          type: string
+          nullable: true
+      required:
+        - name
+        - balance
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalBillsDue30Days:
+          type: number
+        totalBalance:
+          type: number
+        safetyGap:
+          type: number
+        billsDueCount:
+          type: integer
+        overdueCount:
+          type: integer
+        upcomingBills:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillInstance"
+      required:
+        - totalBillsDue30Days
+        - totalBalance
+        - safetyGap
+        - billsDueCount
+        - overdueCount
+        - upcomingBills
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    ExchangeMobileAuthorizationCodeBody:
+      type: object
+      properties:
+        code:
+          type: string
+        codeVerifier:
+          type: string
+        state:
+          type: string
+        nonce:
+          type: string
+        redirectUri:
+          type: string
+      required:
+        - code
+        - codeVerifier
+        - redirectUri
+
+    ExchangeMobileAuthorizationCodeResponse:
+      type: object
+      properties:
+        sessionToken:
+          type: string
+      required:
+        - sessionToken
+
+    LogoutMobileSessionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
