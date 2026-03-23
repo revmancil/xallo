@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { NotificationBell } from "@/components/notification-bell";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -107,8 +108,13 @@ export default function Layout({ children }: { children: ReactNode }) {
       <main className="flex-1 relative overflow-hidden flex flex-col">
         {/* Subtle top ambient glow */}
         <div className="absolute top-0 inset-x-0 h-64 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
+
+        {/* Top bar with notification bell */}
+        <div className="relative z-20 flex items-center justify-end px-4 md:px-8 pt-4 md:pt-6 pb-0">
+          <NotificationBell />
+        </div>
         
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8 relative z-10 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-4 pb-24 md:pb-8 relative z-10 custom-scrollbar">
           <AnimatePresence mode="wait">
             <motion.div
               key={location}

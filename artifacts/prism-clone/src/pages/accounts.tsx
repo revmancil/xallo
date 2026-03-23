@@ -1,9 +1,136 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useGetAccounts, useCreateAccount } from "@workspace/api-client-react";
 import { formatCurrency, toNumber } from "@/lib/utils";
-import { Plus, Landmark, CreditCard, RefreshCw } from "lucide-react";
+import { Plus, Landmark, CreditCard, RefreshCw, Link2, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetAccountsQueryKey, getGetDashboardSummaryQueryKey } from "@workspace/api-client-react";
+import { usePlaidLink } from "react-plaid-link";
+
+const API_BASE = import.meta.env.BASE_URL + "api";
+
+function PlaidLinkSection({ onSuccess }: { onSuccess: () => void }) {
+  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error" | "unconfigured">("idle");
+  const [linkToken, setLinkToken] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string>("");
+  const [linking, setLinking] = useState(false);
+  const [linkedMsg, setLinkedMsg] = useState<string>("");
+
+  useEffect(() => {
+    fetch(`${API_BASE}/plaid/status`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.configured) {
+          setStatus("unconfigured");
+        } else {
+          setStatus("idle");
+        }
+      })
+      .catch(() => setStatus("error"));
+  }, []);
+
+  const fetchLinkToken = async () => {
+    setStatus("loading");
+    try {
+      const res = await fetch(`${API_BASE}/plaid/create-link-token`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to get link token");
+      setLinkToken(data.link_token);
+      setStatus("ready");
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to connect to Plaid.");
+      setStatus("error");
+    }
+  };
+
+  const handlePlaidSuccess = useCallback(async (publicToken: string, metadata: any) => {
+    setLinking(true);
+    try {
+      const res = await fetch(`${API_BASE}/plaid/exchange-token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ public_token: publicToken, metadata }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setLinkedMsg(`Successfully linked ${metadata?.institution?.name || "your bank"} — ${data.accountsImported} account(s) imported.`);
+      onSuccess();
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to link account.");
+      setStatus("error");
+    } finally {
+      setLinking(false);
+      setLinkToken(null);
+      setStatus("idle");
+    }
+  }, [onSuccess]);
+
+  const { open: openPlaid, ready: plaidReady } = usePlaidLink({
+    token: linkToken || "",
+    onSuccess: handlePlaidSuccess,
+    onExit: () => { setLinkToken(null); setStatus("idle"); },
+  });
+
+  useEffect(() => {
+    if (status === "ready" && plaidReady && linkToken) {
+      openPlaid();
+    }
+  }, [status, plaidReady, linkToken, openPlaid]);
+
+  return (
+    <div className="glass-panel rounded-2xl p-6 border border-blue-500/10">
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 shrink-0">
+          <Link2 className="w-6 h-6" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-white text-lg mb-1">Connect with Plaid</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Link your real bank accounts to automatically sync balances, import checking accounts, and pull credit card due dates and statements.
+          </p>
+
+          {linkedMsg && (
+            <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mb-4 text-sm text-emerald-300">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              {linkedMsg}
+            </div>
+          )}
+
+          {status === "error" && errorMsg && (
+            <div className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl mb-4 text-sm text-rose-300">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              {errorMsg}
+            </div>
+          )}
+
+          {status === "unconfigured" ? (
+            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+              <p className="text-sm font-semibold text-amber-300 mb-1">Setup Required</p>
+              <p className="text-xs text-amber-200/70 leading-relaxed">
+                Set <code className="bg-black/20 px-1 rounded">PLAID_CLIENT_ID</code> and{" "}
+                <code className="bg-black/20 px-1 rounded">PLAID_SECRET</code> environment variables to activate Plaid. Get free sandbox credentials at{" "}
+                <a href="https://dashboard.plaid.com/signup" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-200">
+                  dashboard.plaid.com
+                </a>.
+              </p>
+            </div>
+          ) : (
+            <button
+              onClick={fetchLinkToken}
+              disabled={status === "loading" || status === "ready" || linking}
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold text-sm shadow-lg shadow-blue-500/20 transition-all"
+            >
+              {(status === "loading" || linking) ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Connecting…</>
+              ) : (
+                <><Link2 className="w-4 h-4" /> Link Bank Account</>
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Accounts() {
   const { data: accounts, isLoading } = useGetAccounts();
@@ -32,6 +159,11 @@ export default function Accounts() {
     });
   };
 
+  const refreshAccounts = () => {
+    queryClient.invalidateQueries({ queryKey: getGetAccountsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
+  };
+
   const totalBalance = accounts?.reduce((sum, acc) => sum + toNumber(acc.balance), 0) || 0;
 
   return (
@@ -41,7 +173,7 @@ export default function Accounts() {
           <h1 className="text-3xl font-display font-bold text-gradient mb-2">Bank Accounts</h1>
           <p className="text-muted-foreground">Manage balances to calculate your Safety Gap.</p>
         </div>
-        <button 
+        <button
           onClick={() => setIsAdding(!isAdding)}
           className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold shadow-lg shadow-primary/25 flex items-center gap-2 transition-all"
         >
@@ -82,7 +214,7 @@ export default function Accounts() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {isLoading ? (
-          [1,2].map(i => <div key={i} className="h-32 bg-white/5 rounded-2xl animate-pulse" />)
+          [1, 2].map(i => <div key={i} className="h-32 bg-white/5 rounded-2xl animate-pulse" />)
         ) : accounts?.map(acc => (
           <div key={acc.id} className="glass-panel p-6 rounded-2xl flex flex-col justify-between hover:border-white/20 transition-colors">
             <div className="flex justify-between items-start mb-6">
@@ -95,7 +227,7 @@ export default function Accounts() {
                   <p className="text-sm text-muted-foreground">{acc.institution || 'Manual Account'}</p>
                 </div>
               </div>
-              <button className="text-white/30 hover:text-white transition-colors" title="Sync (Mock)">
+              <button onClick={refreshAccounts} className="text-white/30 hover:text-white transition-colors" title="Refresh balance">
                 <RefreshCw className="w-4 h-4" />
               </button>
             </div>
@@ -105,6 +237,8 @@ export default function Accounts() {
           </div>
         ))}
       </div>
+
+      <PlaidLinkSection onSuccess={refreshAccounts} />
     </div>
   );
 }

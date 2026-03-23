@@ -44,20 +44,36 @@ artifacts-monorepo/
 - **users** — Auth users table (Replit Auth)
 - **sessions** — Session storage for Replit Auth
 - **billers** — Biller records (name, category, typical amount, recurrence)
-- **bill_instances** — Individual bill occurrences with status (unpaid/paid/scheduled/overdue)
+- **bill_instances** — Individual bill occurrences with status (unpaid/paid/scheduled/overdue), includes `confirmationNumber` + `paidAt`
 - **income_entries** — Payday/income records
-- **bank_accounts** — Bank account balances (mock, structured for Plaid)
+- **bank_accounts** — Bank account balances (manual or auto-imported via Plaid)
+- **plaid_items** — Stored Plaid access tokens per user/institution
 
 ## Features
 
-- **Dashboard**: Available Cash, Upcoming Bills (30 days), Safety Gap
-- **Bills**: Full bill instance management with status filtering
-- **Calendar**: Monthly view with color-coded bill indicators (Red=overdue, Yellow=unpaid, Blue=scheduled, Green=paid)
+- **Dashboard**: Available Cash, Upcoming Bills (30 days), Safety Gap, Cash Flow Projection (Safe to Spend, Running Balance timeline, Next Payday)
+- **Bills**: Full bill instance management with status filtering; "Mark as Paid" with optional confirmation number entry; **History tab** (audit log of all paid bills with date, amount, confirmation #)
+- **Calendar**: Monthly view with color-coded bill indicators + income (green paydays); clickable days with slide-over panel
 - **Billers**: CRUD management of biller templates
 - **Income**: Payday tracking with recurrence support
-- **Accounts**: Bank account balance management
+- **Accounts**: Bank account balance management + **Plaid integration** (Link Account button, token exchange, depository account import)
+- **Notification Bell**: Smart in-app alerts — Bill Due Today/Tomorrow, Overdue Bills, Low Balance Warning (Safety Gap < $200)
 - **Demo Mode**: Pre-seeded data for guest users (userId = "demo")
 - **Auth**: Replit Auth login — users get their own data when authenticated
+
+## Plaid Integration
+
+Set these environment variables to activate Plaid:
+- `PLAID_CLIENT_ID` — from dashboard.plaid.com
+- `PLAID_SECRET` — sandbox secret from dashboard.plaid.com
+- `PLAID_ENV` — defaults to `sandbox`
+
+Plaid API routes:
+- `GET /api/plaid/status` — check if configured
+- `POST /api/plaid/create-link-token` — create Plaid Link token
+- `POST /api/plaid/exchange-token` — exchange public_token, import accounts
+- `GET /api/plaid/liabilities` — fetch credit card liabilities
+- `GET /api/plaid/transactions` — fetch 90-day transactions + discover recurring bills
 
 ## TypeScript & Composite Projects
 
@@ -86,6 +102,13 @@ Express 5 API server. Routes at `/api`:
 - `/api/dashboard` — dashboard summary stats
 
 All routes support "demo mode" (unauthenticated requests use `userId = "demo"`).
+
+Plaid routes (no codegen — called via raw fetch in frontend):
+- `GET /api/plaid/status`
+- `POST /api/plaid/create-link-token`
+- `POST /api/plaid/exchange-token`
+- `GET /api/plaid/liabilities`
+- `GET /api/plaid/transactions`
 
 ### `artifacts/prism-clone` (`@workspace/prism-clone`)
 
