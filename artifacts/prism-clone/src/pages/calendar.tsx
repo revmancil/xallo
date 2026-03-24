@@ -74,23 +74,32 @@ export default function Calendar() {
 
   return (
     <div className="space-y-3 h-full flex flex-col">
-      {/* Header: title + month nav on first row, legend below */}
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl sm:text-3xl font-display font-bold text-gradient shrink-0">Calendar</h1>
-        <div className="flex items-center gap-1 bg-card border border-white/10 rounded-xl p-1 shrink-0">
-          <button onClick={prevMonth} className="p-1.5 sm:p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-white transition-colors">
-            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-          <span className="font-semibold w-28 sm:w-32 text-center text-white text-sm sm:text-base">
-            {format(currentDate, "MMM yyyy")}
-          </span>
-          <button onClick={nextMonth} className="p-1.5 sm:p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-white transition-colors">
-            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
+      {/* Mobile: title then month nav stacked; Desktop: side by side */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <h1 className="text-2xl sm:text-3xl font-display font-bold text-gradient">Calendar</h1>
+        <div className="flex items-center justify-between sm:justify-end gap-3">
+          <div className="flex items-center gap-1 bg-card border border-white/10 rounded-xl p-1">
+            <button onClick={prevMonth} className="p-1.5 sm:p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-white transition-colors">
+              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+            <span className="font-semibold w-28 sm:w-32 text-center text-white text-sm sm:text-base">
+              {format(currentDate, "MMM yyyy")}
+            </span>
+            <button onClick={nextMonth} className="p-1.5 sm:p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-white transition-colors">
+              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </div>
+          {/* Legend inline on mobile next to month nav */}
+          <div className="flex items-center gap-2 sm:hidden text-xs text-muted-foreground">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-400" /></span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500" /></span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /></span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /></span>
+          </div>
         </div>
       </div>
-      {/* Legend row — always has enough space now */}
-      <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      {/* Full legend — only visible on desktop */}
+      <div className="hidden sm:flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" /> Unpaid</span>
         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block" /> Overdue</span>
         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> Scheduled</span>
