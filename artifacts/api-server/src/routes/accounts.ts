@@ -1,7 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, bankAccountsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { CreateAccountBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
@@ -12,6 +11,23 @@ function getUserId(req: any): string {
   return DEMO_USER_ID;
 }
 
+function parseCreateBody(body: any) {
+  const { name, balance, institution } = body ?? {};
+  if (typeof name !== "string" || name.trim() === "") {
+    return { error: "name is required" };
+  }
+  if (balance == null || isNaN(Number(balance))) {
+    return { error: "balance is required and must be a number" };
+  }
+  return {
+    data: {
+      name: name.trim(),
+      balance: String(Number(balance)),
+      institution: typeof institution === "string" && institution.trim() !== "" ? institution.trim() : null,
+    },
+  };
+}
+
 router.get("/accounts", async (req, res) => {
   const userId = getUserId(req);
   const accounts = await db.select().from(bankAccountsTable).where(eq(bankAccountsTable.userId, userId));
@@ -20,9 +36,9 @@ router.get("/accounts", async (req, res) => {
 
 router.post("/accounts", async (req, res) => {
   const userId = getUserId(req);
-  const parsed = CreateAccountBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid request body" });
+  const parsed = parseCreateBody(req.body);
+  if ("error" in parsed) {
+    res.status(400).json({ error: parsed.error });
     return;
   }
   const [account] = await db

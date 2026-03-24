@@ -1,7 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, billInstancesTable, billersTable } from "@workspace/db";
 import { eq, and, sql, desc } from "drizzle-orm";
-import { CreateBillInstanceBody, UpdateBillInstanceBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
@@ -10,6 +9,44 @@ const DEMO_USER_ID = "demo";
 function getUserId(req: any): string {
   if (req.isAuthenticated()) return req.user.id;
   return DEMO_USER_ID;
+}
+
+const VALID_STATUSES = ["unpaid", "paid", "scheduled", "overdue"] as const;
+
+function parseCreateBody(body: any) {
+  const { billerId, amountDue, dueDate, status, confirmationNumber } = body ?? {};
+  if (billerId == null || isNaN(Number(billerId))) {
+    return { error: "billerId is required and must be a number" };
+  }
+  if (amountDue == null || isNaN(Number(amountDue))) {
+    return { error: "amountDue is required and must be a number" };
+  }
+  if (typeof dueDate !== "string" || dueDate.trim() === "") {
+    return { error: "dueDate is required" };
+  }
+  if (!VALID_STATUSES.includes(status)) {
+    return { error: "status must be one of: unpaid, paid, scheduled, overdue" };
+  }
+  return {
+    data: {
+      billerId: Number(billerId),
+      amountDue: String(Number(amountDue)),
+      dueDate: dueDate.trim(),
+      status,
+      confirmationNumber: typeof confirmationNumber === "string" && confirmationNumber.trim() !== "" ? confirmationNumber.trim() : null,
+    },
+  };
+}
+
+function parseUpdateBody(body: any) {
+  const { amountDue, dueDate, status, confirmationNumber, paidAt } = body ?? {};
+  const data: Record<string, any> = {};
+  if (amountDue !== undefined) data.amountDue = String(Number(amountDue));
+  if (dueDate !== undefined) data.dueDate = String(dueDate).trim();
+  if (status !== undefined && VALID_STATUSES.includes(status)) data.status = status;
+  if (confirmationNumber !== undefined) data.confirmationNumber = confirmationNumber != null && String(confirmationNumber).trim() !== "" ? String(confirmationNumber).trim() : null;
+  if (paidAt !== undefined) data.paidAt = paidAt != null && String(paidAt).trim() !== "" ? String(paidAt).trim() : null;
+  return { data };
 }
 
 router.get("/bills", async (req, res) => {
@@ -60,9 +97,9 @@ router.get("/bills", async (req, res) => {
 
 router.post("/bills", async (req, res) => {
   const userId = getUserId(req);
-  const parsed = CreateBillInstanceBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid request body" });
+  const parsed = parseCreateBody(req.body);
+  if ("error" in parsed) {
+    res.status(400).json({ error: parsed.error });
     return;
   }
   const [bill] = await db
@@ -75,14 +112,14 @@ router.post("/bills", async (req, res) => {
 router.put("/bills/:billId", async (req, res) => {
   const userId = getUserId(req);
   const billId = parseInt(req.params.billId);
-  const parsed = UpdateBillInstanceBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid request body" });
+  const { data } = parseUpdateBody(req.body);
+  if (Object.keys(data).length === 0) {
+    res.status(400).json({ error: "No fields to update" });
     return;
   }
   const [bill] = await db
     .update(billInstancesTable)
-    .set(parsed.data)
+    .set(data)
     .where(and(eq(billInstancesTable.id, billId), eq(billInstancesTable.userId, userId)))
     .returning();
   if (!bill) {
