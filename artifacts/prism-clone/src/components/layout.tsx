@@ -111,7 +111,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 relative overflow-hidden flex flex-col">
+      <main className="flex-1 relative overflow-hidden flex flex-col min-w-0">
         {/* Subtle top ambient glow */}
         <div className="absolute top-0 inset-x-0 h-64 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
 
@@ -120,7 +120,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <NotificationBell />
         </div>
         
-        <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-4 pb-24 md:pb-8 relative z-10 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-4 pb-28 md:pb-8 relative z-10 custom-scrollbar">
           <AnimatePresence mode="wait">
             <motion.div
               key={location}
@@ -137,8 +137,8 @@ export default function Layout({ children }: { children: ReactNode }) {
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-xl border-t border-white/10 z-50 px-2 pb-safe">
-        <div className="flex items-center justify-between p-2">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-xl border-t border-white/10 z-50">
+        <div className="flex items-stretch">
           {mobileNavItems.map((item) => {
             const isActive = location === item.href;
             return (
@@ -146,19 +146,19 @@ export default function Layout({ children }: { children: ReactNode }) {
                 key={item.href} 
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center p-2 rounded-lg min-w-[4rem] transition-colors relative",
+                  "flex flex-col items-center justify-center flex-1 py-2 px-1 transition-colors relative",
                   isActive ? "text-primary" : "text-muted-foreground"
                 )}
               >
                 {isActive && (
                   <motion.div 
                     layoutId="mobile-active"
-                    className="absolute inset-0 bg-primary/10 rounded-lg"
+                    className="absolute inset-0 bg-primary/10"
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   />
                 )}
-                <item.icon className="w-5 h-5 mb-1 relative z-10" />
-                <span className="text-[10px] font-medium relative z-10">{item.label}</span>
+                <item.icon className="w-[18px] h-[18px] mb-0.5 relative z-10" />
+                <span className="text-[9px] font-medium relative z-10 leading-tight">{item.label}</span>
               </Link>
             );
           })}

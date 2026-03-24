@@ -97,42 +97,47 @@ export default function Billers() {
         </form>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading ? (
-          [1, 2, 3].map(i => <div key={i} className="h-40 bg-white/5 rounded-2xl animate-pulse" />)
+          [1, 2, 3].map(i => <div key={i} className="h-24 bg-white/5 rounded-2xl animate-pulse" />)
         ) : billers?.map(biller => (
-          <div key={biller.id} className="glass-panel p-6 rounded-2xl relative group hover:border-white/20 transition-colors">
-            <div className="flex justify-between items-start mb-4">
-              <BillerIcon icon={biller.icon} category={biller.category} name={biller.name} />
-              <button
-                onClick={() => deleteMutation.mutate({ billerId: biller.id })}
-                className="p-2 text-white/30 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-
-            <h3 className="font-bold text-xl text-white mb-1">{biller.name}</h3>
-
-            <div className="space-y-2 mt-3 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <LayoutGrid className="w-4 h-4 text-white/40" />
-                <span>{biller.category}</span>
+          <div key={biller.id} className="glass-panel p-4 sm:p-6 rounded-2xl relative group hover:border-white/20 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="shrink-0">
+                <BillerIcon icon={biller.icon} category={biller.category} name={biller.name} />
               </div>
-              {biller.typicalAmount != null && (
-                <div className="flex items-center gap-2 text-white/90">
-                  <span className="font-semibold text-emerald-400">{formatCurrency(biller.typicalAmount)}</span>
-                  <span className="text-xs px-2 py-0.5 bg-white/10 rounded-full capitalize">{biller.recurrence}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-bold text-lg text-white truncate">{biller.name}</h3>
+                  <button
+                    onClick={() => deleteMutation.mutate({ billerId: biller.id })}
+                    className="p-1.5 text-white/30 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-              )}
-              {biller.websiteUrl && (
-                <div className="flex items-center gap-2 mt-2">
-                  <Globe className="w-4 h-4 text-blue-400" />
-                  <a href={biller.websiteUrl} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline truncate">
-                    {(() => { try { return new URL(biller.websiteUrl).hostname; } catch { return biller.websiteUrl; } })()}
-                  </a>
+                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
+                  <div className="flex items-center gap-1">
+                    <LayoutGrid className="w-3.5 h-3.5 text-white/40" />
+                    <span>{biller.category}</span>
+                  </div>
+                  {biller.typicalAmount != null && (
+                    <>
+                      <span className="text-white/20">·</span>
+                      <span className="font-semibold text-emerald-400">{formatCurrency(biller.typicalAmount)}</span>
+                      <span className="text-xs px-1.5 py-0.5 bg-white/10 rounded-full capitalize">{biller.recurrence}</span>
+                    </>
+                  )}
                 </div>
-              )}
+                {biller.websiteUrl && (
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <Globe className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                    <a href={biller.websiteUrl} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline truncate text-sm">
+                      {(() => { try { return new URL(biller.websiteUrl).hostname; } catch { return biller.websiteUrl; } })()}
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}

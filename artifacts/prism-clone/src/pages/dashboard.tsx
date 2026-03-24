@@ -103,42 +103,42 @@ export default function Dashboard() {
       </div>
 
       {/* Top Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass-panel p-6 rounded-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Wallet className="w-16 h-16" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+        <div className="glass-panel p-5 rounded-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Wallet className="w-12 h-12 md:w-16 md:h-16" />
           </div>
           <p className="text-sm font-medium text-muted-foreground mb-1">Available Cash</p>
-          <h2 className="text-3xl font-bold text-white tracking-tight">{formatCurrency(summary.totalBalance)}</h2>
+          <h2 className="text-2xl lg:text-3xl font-bold text-white tracking-tight truncate">{formatCurrency(summary.totalBalance)}</h2>
         </div>
 
-        <div className="glass-panel p-6 rounded-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-rose-500">
-            <CreditCard className="w-16 h-16" />
+        <div className="glass-panel p-5 rounded-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity text-rose-500">
+            <CreditCard className="w-12 h-12 md:w-16 md:h-16" />
           </div>
-          <p className="text-sm font-medium text-muted-foreground mb-1 flex justify-between">
-            Upcoming Bills (30d)
+          <p className="text-sm font-medium text-muted-foreground mb-1 flex justify-between items-start gap-1">
+            <span>Upcoming Bills (30d)</span>
             {summary.overdueCount > 0 && (
-              <span className="text-xs text-rose-500 font-bold bg-rose-500/10 px-2 rounded-full flex items-center">
+              <span className="text-xs text-rose-500 font-bold bg-rose-500/10 px-2 rounded-full flex items-center shrink-0">
                 {summary.overdueCount} Overdue
               </span>
             )}
           </p>
-          <h2 className="text-3xl font-bold text-white tracking-tight">{formatCurrency(summary.totalBillsDue30Days)}</h2>
+          <h2 className="text-2xl lg:text-3xl font-bold text-white tracking-tight truncate">{formatCurrency(summary.totalBillsDue30Days)}</h2>
         </div>
 
-        <div className={`p-6 rounded-2xl border relative overflow-hidden transition-all duration-500 ${
+        <div className={`p-5 rounded-2xl border relative overflow-hidden transition-all duration-500 ${
           isGapPositive
             ? "bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.15)]"
             : "bg-rose-500/10 border-rose-500/30 shadow-[0_0_30px_rgba(244,63,94,0.15)]"
         }`}>
-          <div className="absolute top-0 right-0 p-4 opacity-20">
-            {isGapPositive ? <ShieldCheck className="w-16 h-16 text-emerald-500" /> : <AlertTriangle className="w-16 h-16 text-rose-500" />}
+          <div className="absolute top-0 right-0 p-3 opacity-20">
+            {isGapPositive ? <ShieldCheck className="w-12 h-12 md:w-16 md:h-16 text-emerald-500" /> : <AlertTriangle className="w-12 h-12 md:w-16 md:h-16 text-rose-500" />}
           </div>
           <p className={`text-sm font-medium mb-1 ${isGapPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
             Safety Gap (30d)
           </p>
-          <h2 className={`text-3xl font-bold tracking-tight ${isGapPositive ? 'text-emerald-400' : 'text-rose-500'}`}>
+          <h2 className={`text-2xl lg:text-3xl font-bold tracking-tight truncate ${isGapPositive ? 'text-emerald-400' : 'text-rose-500'}`}>
             {formatCurrency(summary.safetyGap)}
           </h2>
         </div>

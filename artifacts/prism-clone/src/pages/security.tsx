@@ -458,18 +458,21 @@ export default function Security() {
           <p className="text-muted-foreground">Audit log, two-factor authentication, and PDF bill scanning.</p>
         </div>
 
-        <div className="flex items-center gap-1 bg-card border border-white/10 rounded-xl p-1 w-fit">
-          {tabs.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                tab === t.id ? "bg-primary text-white shadow-md" : "text-muted-foreground hover:text-white hover:bg-white/5"
-              }`}
-            >
-              {t.icon} {t.label}
-            </button>
-          ))}
+        <div className="overflow-x-auto -mx-1 px-1">
+          <div className="flex items-center gap-1 bg-card border border-white/10 rounded-xl p-1 w-max">
+            {tabs.map(t => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                  tab === t.id ? "bg-primary text-white shadow-md" : "text-muted-foreground hover:text-white hover:bg-white/5"
+                }`}
+              >
+                {t.icon}
+                <span className="hidden xs:inline">{t.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

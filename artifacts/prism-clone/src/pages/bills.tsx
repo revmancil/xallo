@@ -15,7 +15,7 @@ import { format, parseISO } from "date-fns";
 import {
   CheckCircle2, Check, History, Hash, X, Plus,
   Pencil, Trash2, Loader2, CalendarDays, FileScan,
-  Upload, AlertTriangle, Sparkles, RefreshCw,
+  Upload, AlertTriangle, Sparkles, RefreshCw, Receipt,
 } from "lucide-react";
 import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -187,7 +187,7 @@ export default function Bills() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           {view === "bills" && (
             <>
               <button
@@ -197,42 +197,47 @@ export default function Bills() {
                 className="flex items-center gap-2 px-3 py-2 rounded-xl font-semibold border border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50"
               >
                 {autoFilling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                <span className="hidden sm:inline">Auto-fill</span>
+                <span className="hidden sm:inline text-sm">Auto-fill</span>
               </button>
               <button
                 onClick={() => { setIsScanning(!isScanning); setIsAdding(false); setScanResult(null); setScanError(""); setScanSaved(false); }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold border transition-all ${
+                title="Scan PDF"
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-semibold border transition-all ${
                   isScanning
                     ? "bg-violet-600/20 border-violet-500/40 text-violet-300"
                     : "bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10"
                 }`}
               >
-                <FileScan className="w-4 h-4" /> Scan PDF
+                <FileScan className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">Scan PDF</span>
               </button>
               <button
                 onClick={() => { setIsAdding(!isAdding); setIsScanning(false); setEditForm(null); }}
-                className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold shadow-lg shadow-primary/25 transition-all"
+                className="flex items-center gap-2 px-3 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold shadow-lg shadow-primary/25 transition-all"
               >
-                <Plus className="w-4 h-4" /> Add Bill
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">Add Bill</span>
               </button>
             </>
           )}
           <div className="flex items-center gap-1 bg-card border border-white/10 rounded-xl p-1">
             <button
               onClick={() => { setView("bills"); setIsAdding(false); }}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                 view === "bills" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-white hover:bg-white/5"
               }`}
             >
-              Bills
+              <Receipt className="w-3.5 h-3.5" />
+              <span className="hidden xs:inline">Bills</span>
             </button>
             <button
               onClick={() => { setView("history"); setIsAdding(false); }}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                 view === "history" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-white hover:bg-white/5"
               }`}
             >
-              <History className="w-3.5 h-3.5" /> History
+              <History className="w-3.5 h-3.5" />
+              <span className="hidden xs:inline">History</span>
             </button>
           </div>
         </div>
@@ -444,20 +449,22 @@ export default function Bills() {
       )}
 
       {view === "bills" && (
-        <div className="flex items-center gap-2 bg-card border border-white/10 rounded-xl p-1 w-fit">
-          {FILTERS.map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                filter === f
-                  ? "bg-primary/80 text-white shadow-md"
-                  : "text-muted-foreground hover:text-white hover:bg-white/5"
-              }`}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
+        <div className="overflow-x-auto -mx-1 px-1">
+          <div className="flex items-center gap-1 bg-card border border-white/10 rounded-xl p-1 w-max min-w-full sm:w-fit sm:min-w-0">
+            {FILTERS.map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                  filter === f
+                    ? "bg-primary/80 text-white shadow-md"
+                    : "text-muted-foreground hover:text-white hover:bg-white/5"
+                }`}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
