@@ -4,7 +4,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Plus, Trash2, Globe, LayoutGrid } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetBillersQueryKey } from "@workspace/api-client-react";
-import { BillerIcon } from "@/components/biller-icon";
+import { BillerIcon, CATEGORY_COLORS } from "@/components/biller-icon";
 
 
 export default function Billers() {

@@ -33,7 +33,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   fitness: <Dumbbell className="w-5 h-5" />,
 };
 
-const CATEGORY_COLORS: Record<string, string> = {
+export const CATEGORY_COLORS: Record<string, string> = {
   Entertainment: "from-purple-500/20 to-pink-500/20 border-purple-500/30 text-purple-400",
   Utilities: "from-blue-500/20 to-cyan-500/20 border-blue-500/30 text-blue-400",
   Housing: "from-amber-500/20 to-orange-500/20 border-amber-500/30 text-amber-400",
