@@ -8,3 +8,4 @@ export * from "./security_logs";
 export * from "./user_2fa";
 export * from "./budgets";
 export * from "./email_imports";
+export * from "./credit_cards";

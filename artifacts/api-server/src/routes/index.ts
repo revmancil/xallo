@@ -12,6 +12,7 @@ import securityLogRouter from "./security-log";
 import pdfUploadRouter from "./pdf-upload";
 import budgetRouter from "./budget";
 import gmailImportRouter from "./gmail-import";
+import creditCardsRouter from "./credit-cards";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(securityLogRouter);
 router.use(pdfUploadRouter);
 router.use(budgetRouter);
 router.use(gmailImportRouter);
+router.use(creditCardsRouter);
 
 export default router;

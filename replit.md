@@ -50,6 +50,8 @@ artifacts-monorepo/
 - **plaid_items** — Stored Plaid access tokens per user/institution
 - **security_logs** — Security audit log (IP, action, metadata, timestamp)
 - **user_2fa** — TOTP 2FA secrets per user (AES-256-GCM encrypted)
+- **email_imports** — AgentMail import job records (inbox polling, parsed bill data)
+- **credit_cards** — Credit card records (name, institution, last four, limit, balance, APR, due day, min payment, color)
 
 ## Features
 
@@ -58,7 +60,7 @@ artifacts-monorepo/
 - **Calendar**: Monthly view with color-coded bill indicators + income (green paydays); clickable days with slide-over panel
 - **Billers**: CRUD management of biller templates
 - **Income**: Payday tracking with recurrence support
-- **Accounts**: Bank account balance management + **Plaid integration** (Link Account button, token exchange, depository account import)
+- **Accounts**: Bank account balance management + **Credit Cards** section (limits, balances, utilization bars with green/amber/red thresholds, APR, due day, min payment, color picker) + **Plaid integration** (Link Account button, token exchange, depository account import)
 - **Analytics**: 6-month spending bar chart (Recharts), Top 5 Billers by spend, Subscription Watcher (flags >10% month-over-month price changes)
 - **Security**: Audit Log table (action/IP/timestamp), TOTP 2FA setup (speakeasy + QR code), PDF Bill Scanner (multer + pdf-parse extracts amount & due date)
 - **AES-256-GCM Encryption**: Plaid tokens and 2FA secrets encrypted at rest via `lib/encryption.ts`
@@ -104,9 +106,18 @@ Express 5 API server. Routes at `/api`:
 - `/api/bills` — CRUD bill instances (supports ?month=&year= query)
 - `/api/income` — CRUD income entries
 - `/api/accounts` — CRUD bank accounts
+- `/api/credit-cards` — CRUD credit card records (limit, balance, APR, due day, min payment, color)
 - `/api/dashboard` — dashboard summary stats
 
 All routes support "demo mode" (unauthenticated requests use `userId = "demo"`).
+
+## Vite Routing Fix
+
+The Replit proxy strips the `/prism-clone` prefix before forwarding to Vite, so `import.meta.env.BASE_URL` = `/` in the dev server, but the browser still sees `/prism-clone/...` URLs. Wouter needs to know the actual browser prefix.
+
+Fix: `artifacts/prism-clone/.env.local` sets `VITE_ROUTER_BASE=/prism-clone`. App.tsx reads this via `import.meta.env.VITE_ROUTER_BASE` to pass the correct base to `<WouterRouter base={...}>`.
+
+If the artifact slug changes, update `VITE_ROUTER_BASE` accordingly.
 
 Plaid routes (no codegen — called via raw fetch in frontend):
 - `GET /api/plaid/status`

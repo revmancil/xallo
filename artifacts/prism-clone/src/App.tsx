@@ -42,11 +42,21 @@ function Router() {
   );
 }
 
+/**
+ * Determine the Wouter router base.
+ * VITE_ROUTER_BASE is the browser-visible path prefix (e.g. "/prism-clone")
+ * which may differ from import.meta.env.BASE_URL when the Replit proxy strips
+ * the prefix before forwarding requests to the Vite dev server.
+ */
+const ROUTER_BASE = (import.meta.env.VITE_ROUTER_BASE as string | undefined)
+  ?? import.meta.env.BASE_URL?.replace(/\/$/, "")
+  ?? "";
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+        <WouterRouter base={ROUTER_BASE}>
           <Layout>
             <Router />
           </Layout>
