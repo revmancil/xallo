@@ -28,7 +28,7 @@ const navItems = [
   { href: "/accounts", label: "Accounts", icon: Landmark },
   { href: "/budget", label: "Budget", icon: PiggyBank },
   { href: "/analytics", label: "Analytics", icon: BarChart2 },
-  { href: "/gmail-import", label: "Gmail Import", icon: Mail },
+  { href: "/gmail-import", label: "Email Import", icon: Mail },
   { href: "/security", label: "Security", icon: Shield },
 ];
 

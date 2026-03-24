@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useGetBillers, useCreateBiller, getGetBillersQueryKey } from "@workspace/api-client-react";
 import { formatCurrency } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import {
   Mail, RefreshCw, Loader2, CheckCircle2, AlertTriangle,
   X, Plus, UserPlus, Trash2, ChevronDown, ChevronUp,
-  Sparkles, InboxIcon,
+  Sparkles, InboxIcon, Copy, Check, ArrowRight,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -24,7 +24,26 @@ type EmailImport = {
   status: string;
 };
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      onClick={copy}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-all"
+    >
+      {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+      {copied ? "Copied!" : "Copy"}
+    </button>
+  );
+}
+
 export default function GmailImport() {
+  const [forwardingAddress, setForwardingAddress] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ synced: number; skipped: number } | null>(null);
   const [syncError, setSyncError] = useState("");
@@ -41,7 +60,7 @@ export default function GmailImport() {
   const queryClient = useQueryClient();
   const createBillerMutation = useCreateBiller({
     mutation: {
-      onSuccess: (newBiller: any, _vars, ctx: any) => {
+      onSuccess: (newBiller: any, _vars: any, ctx: any) => {
         queryClient.invalidateQueries({ queryKey: getGetBillersQueryKey() });
         const importId = ctx as number;
         setBillerSelections(prev => ({ ...prev, [importId]: String(newBiller.id) }));
@@ -50,6 +69,14 @@ export default function GmailImport() {
       }
     }
   });
+
+  useEffect(() => {
+    fetch(`${API_BASE}/gmail/inbox`)
+      .then(r => r.json())
+      .then(d => { if (d.email) setForwardingAddress(d.email); })
+      .catch(() => {});
+    loadImports();
+  }, []);
 
   const loadImports = async () => {
     try {
@@ -71,7 +98,7 @@ export default function GmailImport() {
       setSyncResult({ synced: data.synced, skipped: data.skipped });
       await loadImports();
     } catch (e: any) {
-      setSyncError(e.message || "Failed to sync Gmail");
+      setSyncError(e.message || "Failed to sync");
     } finally {
       setSyncing(false);
     }
@@ -87,7 +114,7 @@ export default function GmailImport() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ billerId: parseInt(billerId) }),
       });
-      if (!res.ok) throw new Error("Failed to create bill");
+      if (!res.ok) throw new Error();
       setImports(prev => prev.map(i => i.id === imp.id ? { ...i, status: "imported" } : i));
     } catch {}
     setCreatingBill(prev => ({ ...prev, [imp.id]: false }));
@@ -102,10 +129,9 @@ export default function GmailImport() {
     const name = newBillerName[importId]?.trim();
     const category = newBillerCategory[importId] || "Utilities";
     if (!name) return;
-    createBillerMutation.mutate({ data: { name, category } }, { onSuccess: (_d: any) => {}, context: importId });
+    createBillerMutation.mutate({ data: { name, category } }, { context: importId });
   };
 
-  // Group by status
   const ready = imports.filter(i => i.status === "ready");
   const noData = imports.filter(i => i.status === "no_data");
   const imported = imports.filter(i => i.status === "imported");
@@ -115,54 +141,79 @@ export default function GmailImport() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-gradient mb-2">Gmail Import</h1>
-          <p className="text-muted-foreground">
-            Scan your Gmail inbox for bill emails and add them automatically.
-          </p>
+          <h1 className="text-3xl font-display font-bold text-gradient mb-2">Email Import</h1>
+          <p className="text-muted-foreground">Forward bill emails to your inbox — they'll appear here automatically.</p>
         </div>
         <button
           onClick={handleSync}
           disabled={syncing}
-          className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold shadow-lg shadow-primary/25 transition-all disabled:opacity-50"
+          className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold shadow-lg shadow-primary/25 transition-all disabled:opacity-50 shrink-0"
         >
           {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          {syncing ? "Scanning Gmail…" : "Scan Gmail Now"}
+          {syncing ? "Checking inbox…" : "Check for New Bills"}
         </button>
       </div>
 
-      {/* Info banner */}
-      {!loaded && !syncing && (
-        <div className="flex items-start gap-3 p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl">
-          <Mail className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-semibold text-blue-300">Connected to Gmail</p>
-            <p className="text-xs text-blue-400/70 mt-0.5">
-              Click "Scan Gmail Now" to search your last 90 days of emails for bills. We look for keywords
-              like "amount due", "payment due", and "billing statement". Your emails are never stored — only
-              the extracted bill data is saved.
+      {/* Forwarding address card */}
+      {forwardingAddress && (
+        <div className="glass-panel rounded-2xl border border-primary/20 p-5 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <Mail className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Your bill forwarding address</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Forward any bill email here and it will be parsed automatically.</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl">
+            <code className="flex-1 text-sm font-mono text-primary select-all">{forwardingAddress}</code>
+            <CopyButton text={forwardingAddress} />
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">How to set it up</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {[
+                { step: "1", text: "Open a bill email in Gmail, Outlook, or any email app" },
+                { step: "2", text: `Forward it to ${forwardingAddress}` },
+                { step: "3", text: "Come back and click \"Check for New Bills\"" },
+              ].map(({ step, text }) => (
+                <div key={step} className="flex items-start gap-2 p-3 bg-white/[0.03] border border-white/8 rounded-xl">
+                  <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{step}</span>
+                  <p className="text-xs text-muted-foreground">{text}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground/60 flex items-center gap-1.5 mt-1">
+              <ArrowRight className="w-3 h-3 shrink-0" />
+              Tip: In Gmail you can create a filter to auto-forward all emails from your billers.
             </p>
           </div>
         </div>
       )}
 
-      {/* Sync error */}
+      {/* Errors */}
       {syncError && (
         <div className="flex items-center gap-2 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-sm text-rose-300">
           <AlertTriangle className="w-4 h-4 shrink-0" /> {syncError}
         </div>
       )}
 
-      {/* Sync result banner */}
+      {/* Sync result */}
       {syncResult && (
         <div className="flex items-start gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl animate-in fade-in">
           <Sparkles className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-emerald-300">
-              Scan complete — {syncResult.synced} new email{syncResult.synced !== 1 ? "s" : ""} found
+              {syncResult.synced === 0
+                ? "Inbox is up to date — no new bill emails found"
+                : `${syncResult.synced} new email${syncResult.synced !== 1 ? "s" : ""} found`}
             </p>
-            <p className="text-xs text-emerald-400/70 mt-0.5">
-              {syncResult.skipped} already seen. Emails with a detected amount &amp; due date are ready to add.
-            </p>
+            {syncResult.skipped > 0 && (
+              <p className="text-xs text-emerald-400/70 mt-0.5">{syncResult.skipped} already seen and skipped.</p>
+            )}
           </div>
           <button onClick={() => setSyncResult(null)} className="text-emerald-400/60 hover:text-emerald-300">
             <X className="w-4 h-4" />
@@ -179,24 +230,22 @@ export default function GmailImport() {
           </h2>
           {ready.map(imp => (
             <ImportCard
-              key={imp.id}
-              imp={imp}
-              billers={billers || []}
+              key={imp.id} imp={imp} billers={billers || []}
               billerId={billerSelections[imp.id] || ""}
-              onBillerChange={(v) => { setBillerSelections(prev => ({ ...prev, [imp.id]: v })); setShowNewBiller(prev => ({ ...prev, [imp.id]: false })); }}
+              onBillerChange={v => { setBillerSelections(p => ({ ...p, [imp.id]: v })); setShowNewBiller(p => ({ ...p, [imp.id]: false })); }}
               onAddBill={() => handleCreateBill(imp)}
               addingBill={!!creatingBill[imp.id]}
               onDismiss={() => handleDismiss(imp.id)}
               showNew={!!showNewBiller[imp.id]}
-              onToggleNew={() => setShowNewBiller(prev => ({ ...prev, [imp.id]: !prev[imp.id] }))}
+              onToggleNew={() => setShowNewBiller(p => ({ ...p, [imp.id]: !p[imp.id] }))}
               newName={newBillerName[imp.id] || ""}
-              onNewName={(v) => setNewBillerName(prev => ({ ...prev, [imp.id]: v }))}
+              onNewName={v => setNewBillerName(p => ({ ...p, [imp.id]: v }))}
               newCategory={newBillerCategory[imp.id] || "Utilities"}
-              onNewCategory={(v) => setNewBillerCategory(prev => ({ ...prev, [imp.id]: v }))}
+              onNewCategory={v => setNewBillerCategory(p => ({ ...p, [imp.id]: v }))}
               onCreateBiller={() => handleCreateBiller(imp.id)}
               creatingBiller={createBillerMutation.isPending}
               expanded={!!expanded[imp.id]}
-              onToggleExpand={() => setExpanded(prev => ({ ...prev, [imp.id]: !prev[imp.id] }))}
+              onToggleExpand={() => setExpanded(p => ({ ...p, [imp.id]: !p[imp.id] }))}
             />
           ))}
         </section>
@@ -207,14 +256,16 @@ export default function GmailImport() {
         <section className="space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
-            No bill data extracted ({noData.length})
+            Could not extract bill data ({noData.length})
           </h2>
           {noData.map(imp => (
             <div key={imp.id} className="glass-panel rounded-xl border border-white/10 px-4 py-3 flex items-center gap-3">
               <Mail className="w-4 h-4 text-muted-foreground/50 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">{imp.subject}</p>
-                <p className="text-xs text-muted-foreground">{imp.billerHint} · {imp.receivedAt ? format(parseISO(imp.receivedAt), "MMM d, yyyy") : ""}</p>
+                <p className="text-xs text-muted-foreground">
+                  {imp.billerHint}{imp.receivedAt ? ` · ${format(parseISO(imp.receivedAt), "MMM d, yyyy")}` : ""}
+                </p>
               </div>
               <span className="text-xs text-amber-400/80 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full shrink-0">No data</span>
               <button onClick={() => handleDismiss(imp.id)} className="text-muted-foreground/40 hover:text-rose-400 transition-colors shrink-0">
@@ -237,7 +288,9 @@ export default function GmailImport() {
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">{imp.subject}</p>
-                <p className="text-xs text-muted-foreground">{imp.billerHint} · {imp.receivedAt ? format(parseISO(imp.receivedAt), "MMM d, yyyy") : ""}</p>
+                <p className="text-xs text-muted-foreground">
+                  {imp.billerHint}{imp.receivedAt ? ` · ${format(parseISO(imp.receivedAt), "MMM d, yyyy")}` : ""}
+                </p>
               </div>
               {imp.amountDue && <span className="text-sm font-bold text-white shrink-0">{formatCurrency(imp.amountDue)}</span>}
               <span className="text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full shrink-0">Imported</span>
@@ -246,13 +299,13 @@ export default function GmailImport() {
         </section>
       )}
 
-      {/* Empty state */}
+      {/* Empty state after first sync */}
       {loaded && imports.length === 0 && !syncing && (
         <div className="p-12 text-center glass-panel rounded-2xl border border-white/10">
           <InboxIcon className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-muted-foreground font-medium">No bill emails found yet</p>
+          <p className="text-muted-foreground font-medium">No forwarded bills yet</p>
           <p className="text-sm text-muted-foreground/60 mt-1">
-            Try scanning — we'll search for "amount due", "payment due", and similar keywords.
+            Forward a bill email to <span className="font-mono text-primary/80">{forwardingAddress || "your inbox"}</span>, then click "Check for New Bills".
           </p>
         </div>
       )}
@@ -275,25 +328,17 @@ function ImportCard({
 }) {
   return (
     <div className="glass-panel rounded-2xl border border-primary/20 overflow-hidden">
-      {/* Main row */}
       <div className="px-4 py-3 flex items-center gap-3">
         <Mail className="w-4 h-4 text-primary/70 shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white truncate">{imp.subject}</p>
           <p className="text-xs text-muted-foreground">
-            {imp.billerHint}
-            {imp.receivedAt ? ` · ${format(parseISO(imp.receivedAt), "MMM d, yyyy")}` : ""}
+            {imp.billerHint}{imp.receivedAt ? ` · ${format(parseISO(imp.receivedAt), "MMM d, yyyy")}` : ""}
           </p>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          {imp.amountDue && (
-            <span className="text-sm font-bold text-white">{formatCurrency(imp.amountDue)}</span>
-          )}
-          {imp.dueDate && (
-            <span className="text-xs text-muted-foreground hidden sm:block">
-              Due {format(parseISO(imp.dueDate), "MMM d")}
-            </span>
-          )}
+          {imp.amountDue && <span className="text-sm font-bold text-white">{formatCurrency(imp.amountDue)}</span>}
+          {imp.dueDate && <span className="text-xs text-muted-foreground hidden sm:block">Due {format(parseISO(imp.dueDate), "MMM d")}</span>}
           <button onClick={onToggleExpand} className="text-muted-foreground hover:text-white transition-colors p-1">
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
@@ -303,25 +348,14 @@ function ImportCard({
         </div>
       </div>
 
-      {/* Expanded: biller assignment */}
       {expanded && (
         <div className="border-t border-white/10 px-4 py-3 space-y-3 bg-white/[0.02]">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-xs">
-            <div>
-              <p className="text-muted-foreground mb-0.5">From</p>
-              <p className="text-white font-medium truncate">{imp.fromEmail || imp.billerHint}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-0.5">Amount</p>
-              <p className="text-white font-bold">{imp.amountDue ? formatCurrency(imp.amountDue) : "—"}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-0.5">Due Date</p>
-              <p className="text-white font-medium">{imp.dueDate ? format(parseISO(imp.dueDate), "MMM d, yyyy") : "—"}</p>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div><p className="text-muted-foreground mb-0.5">From</p><p className="text-white font-medium truncate">{imp.fromEmail || imp.billerHint}</p></div>
+            <div><p className="text-muted-foreground mb-0.5">Amount</p><p className="text-white font-bold">{imp.amountDue ? formatCurrency(imp.amountDue) : "—"}</p></div>
+            <div><p className="text-muted-foreground mb-0.5">Due Date</p><p className="text-white font-medium">{imp.dueDate ? format(parseISO(imp.dueDate), "MMM d, yyyy") : "—"}</p></div>
           </div>
 
-          {/* Biller selector + add button */}
           <div className="flex items-center gap-2 flex-wrap">
             <select
               value={billerId}
@@ -329,9 +363,7 @@ function ImportCard({
               className="flex-1 min-w-0 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-primary outline-none"
             >
               <option value="">Assign to biller…</option>
-              {billers.map((b: any) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
+              {billers.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
             <button
               onClick={onAddBill}
@@ -343,7 +375,6 @@ function ImportCard({
             </button>
           </div>
 
-          {/* Quick biller create */}
           {!showNew ? (
             <button onClick={onToggleNew} className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 transition-colors">
               <UserPlus className="w-3.5 h-3.5" /> Biller not in list? Create one
@@ -353,36 +384,26 @@ function ImportCard({
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">New Biller</p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <input
-                  type="text"
-                  placeholder="Biller name…"
-                  value={newName}
+                  type="text" placeholder="Biller name…" value={newName}
                   onChange={e => onNewName(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") onCreateBiller(); if (e.key === "Escape") onToggleNew(); }}
                   autoFocus
                   className="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-violet-500 outline-none placeholder:text-muted-foreground/50"
                 />
-                <select
-                  value={newCategory}
-                  onChange={e => onNewCategory(e.target.value)}
-                  className="bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-violet-500 outline-none"
-                >
+                <select value={newCategory} onChange={e => onNewCategory(e.target.value)}
+                  className="bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-violet-500 outline-none">
                   {["Housing","Utilities","Entertainment","Subscriptions","Insurance","Health","Food","Transport"].map(c => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={onCreateBiller}
-                  disabled={!newName.trim() || creatingBiller}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white rounded-lg transition-all disabled:opacity-50"
-                >
+                <button onClick={onCreateBiller} disabled={!newName.trim() || creatingBiller}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white rounded-lg transition-all disabled:opacity-50">
                   {creatingBiller ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                   Create &amp; Select
                 </button>
-                <button onClick={onToggleNew} className="text-xs text-muted-foreground hover:text-white transition-colors px-2 py-1.5">
-                  Cancel
-                </button>
+                <button onClick={onToggleNew} className="text-xs text-muted-foreground hover:text-white transition-colors px-2 py-1.5">Cancel</button>
               </div>
             </div>
           )}

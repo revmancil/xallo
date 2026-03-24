@@ -28,3 +28,9 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+AGENTMAIL_API_KEY = "am_us_69e4e45e2dd44440134776908927dbc58da229e3d5115de25646d6581ef814fc"
+AGENTMAIL_BILLS_INBOX = "bills-prismclone@agentmail.to"
