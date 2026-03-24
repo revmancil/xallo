@@ -109,14 +109,14 @@ export default function Dashboard() {
             <Wallet className="w-12 h-12 md:w-16 md:h-16" />
           </div>
           <p className="text-sm font-medium text-muted-foreground mb-1">Available Cash</p>
-          <h2 className="text-2xl lg:text-3xl font-bold text-white tracking-tight truncate">{formatCurrency(summary.totalBalance)}</h2>
+          <h2 className="text-xl sm:text-2xl xl:text-3xl font-bold text-white tracking-tight">{formatCurrency(summary.totalBalance)}</h2>
         </div>
 
         <div className="glass-panel p-5 rounded-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity text-rose-500">
             <CreditCard className="w-12 h-12 md:w-16 md:h-16" />
           </div>
-          <p className="text-sm font-medium text-muted-foreground mb-1 flex justify-between items-start gap-1">
+          <p className="text-sm font-medium text-muted-foreground mb-1 flex justify-between items-start gap-1 flex-wrap">
             <span>Upcoming Bills (30d)</span>
             {summary.overdueCount > 0 && (
               <span className="text-xs text-rose-500 font-bold bg-rose-500/10 px-2 rounded-full flex items-center shrink-0">
@@ -124,7 +124,7 @@ export default function Dashboard() {
               </span>
             )}
           </p>
-          <h2 className="text-2xl lg:text-3xl font-bold text-white tracking-tight truncate">{formatCurrency(summary.totalBillsDue30Days)}</h2>
+          <h2 className="text-xl sm:text-2xl xl:text-3xl font-bold text-white tracking-tight">{formatCurrency(summary.totalBillsDue30Days)}</h2>
         </div>
 
         <div className={`p-5 rounded-2xl border relative overflow-hidden transition-all duration-500 ${
@@ -138,7 +138,7 @@ export default function Dashboard() {
           <p className={`text-sm font-medium mb-1 ${isGapPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
             Safety Gap (30d)
           </p>
-          <h2 className={`text-2xl lg:text-3xl font-bold tracking-tight truncate ${isGapPositive ? 'text-emerald-400' : 'text-rose-500'}`}>
+          <h2 className={`text-xl sm:text-2xl xl:text-3xl font-bold tracking-tight ${isGapPositive ? 'text-emerald-400' : 'text-rose-500'}`}>
             {formatCurrency(summary.safetyGap)}
           </h2>
         </div>

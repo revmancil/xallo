@@ -41,16 +41,17 @@ export default function Income() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-gradient mb-2">Income Tracking</h1>
           <p className="text-muted-foreground">Log your paydays to visualize cash flow.</p>
         </div>
         <button 
           onClick={() => setIsAdding(!isAdding)}
-          className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-semibold shadow-lg shadow-emerald-500/25 flex items-center gap-2 transition-all"
+          className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-semibold shadow-lg shadow-emerald-500/25 flex items-center gap-2 transition-all whitespace-nowrap"
         >
-          <Plus className="w-4 h-4" /> Add Payday
+          <Plus className="w-4 h-4" />
+          <span>Add Payday</span>
         </button>
       </div>
 
@@ -86,48 +87,41 @@ export default function Income() {
       )}
 
       <div className="glass-panel rounded-2xl overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-white/10 bg-white/5">
-              <th className="p-4 text-sm font-medium text-muted-foreground">Source</th>
-              <th className="p-4 text-sm font-medium text-muted-foreground">Amount</th>
-              <th className="p-4 text-sm font-medium text-muted-foreground">Next Date</th>
-              <th className="p-4 text-sm font-medium text-muted-foreground">Recurrence</th>
-              <th className="p-4"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {isLoading ? (
-              <tr><td colSpan={5} className="p-8 text-center text-white/50 animate-pulse">Loading...</td></tr>
-            ) : incomes?.length === 0 ? (
-              <tr><td colSpan={5} className="p-8 text-center text-white/50">No income entries found.</td></tr>
-            ) : incomes?.map(inc => (
-              <tr key={inc.id} className="hover:bg-white/[0.02] group transition-colors">
-                <td className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                      <Banknote className="w-5 h-5" />
-                    </div>
+        {isLoading ? (
+          <div className="p-6 space-y-3">
+            {[1, 2, 3].map(i => <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />)}
+          </div>
+        ) : incomes?.length === 0 ? (
+          <div className="p-10 text-center text-white/50">No income entries yet.</div>
+        ) : (
+          <div className="divide-y divide-white/5">
+            {incomes?.map(inc => (
+              <div key={inc.id} className="p-4 flex items-center gap-3 group hover:bg-white/[0.02] transition-colors">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 shrink-0">
+                  <Banknote className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-white">{inc.label}</span>
+                    <span className="text-xs px-2 py-0.5 bg-white/10 rounded-full text-white/60 capitalize">{inc.recurrence}</span>
                   </div>
-                </td>
-                <td className="p-4 font-bold text-emerald-400">{formatCurrency(inc.amount)}</td>
-                <td className="p-4 text-white/80">{format(parseISO(inc.payDate), 'MMM d, yyyy')}</td>
-                <td className="p-4">
-                  <span className="px-2 py-1 bg-white/10 rounded-md text-xs text-white/80 capitalize">{inc.recurrence}</span>
-                </td>
-                <td className="p-4 text-right">
+                  <p className="text-sm text-white/50 mt-0.5">
+                    {format(parseISO(inc.payDate), 'MMM d, yyyy')}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-bold text-emerald-400 whitespace-nowrap">{formatCurrency(inc.amount)}</span>
                   <button 
                     onClick={() => deleteMutation.mutate({ incomeId: inc.id })}
                     className="p-2 text-white/30 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
-                </td>
-              </tr>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        )}
       </div>
     </div>
   );

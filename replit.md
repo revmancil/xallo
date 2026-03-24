@@ -135,6 +135,15 @@ Packages installed in api-server: plaid, multer, speakeasy, qrcode, pdf-parse@1.
 
 React + Vite frontend at `/` (root path). Pages: Dashboard, Bills, Calendar, Billers, Income, Accounts, Analytics, Security.
 
+**Responsive design**: Fully responsive for phone, tablet, and desktop.
+- Bottom nav (mobile) uses 6 items with `flex-1` layout — all fit without overflow.
+- A custom `xs` breakpoint (480px / 30rem) is defined in `src/index.css` via `@theme inline { --breakpoint-xs: 30rem }`.
+- Dashboard stat cards scale from `text-xl` (tablet) → `text-3xl` (xl+) to prevent clipping alongside the sidebar.
+- Bills page header buttons collapse to icon-only on mobile (`hidden sm:inline` for labels).
+- Filter tabs and Security tabs use `overflow-x-auto` scrollable containers.
+- Billers cards use a horizontal (icon-left) layout instead of stacked.
+- Income list uses a card layout instead of a fixed-column table.
+
 ### `lib/db` (`@workspace/db`)
 
 Database layer. Push schema: `pnpm --filter @workspace/db run push`

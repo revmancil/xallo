@@ -171,16 +171,17 @@ export default function Accounts() {
 
   return (
     <div className="space-y-6 pb-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-gradient mb-2">Bank Accounts</h1>
           <p className="text-muted-foreground">Manage balances to calculate your Safety Gap.</p>
         </div>
         <button
           onClick={() => setIsAdding(!isAdding)}
-          className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold shadow-lg shadow-primary/25 flex items-center gap-2 transition-all"
+          className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold shadow-lg shadow-primary/25 flex items-center gap-2 transition-all whitespace-nowrap"
         >
-          <Plus className="w-4 h-4" /> Add Account
+          <Plus className="w-4 h-4" />
+          <span>Add Account</span>
         </button>
       </div>
 

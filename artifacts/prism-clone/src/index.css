@@ -2,6 +2,7 @@
 @import "tailwindcss";
 
 @theme inline {
+  --breakpoint-xs: 30rem;
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Outfit', sans-serif;
 

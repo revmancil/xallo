@@ -50,9 +50,10 @@ export default function Billers() {
         </div>
         <button
           onClick={() => setIsAdding(!isAdding)}
-          className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold shadow-lg shadow-primary/25 flex items-center gap-2 transition-all"
+          className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold shadow-lg shadow-primary/25 flex items-center gap-2 transition-all whitespace-nowrap"
         >
-          <Plus className="w-4 h-4" /> Add Biller
+          <Plus className="w-4 h-4" />
+          <span>Add Biller</span>
         </button>
       </div>
 
@@ -108,7 +109,7 @@ export default function Billers() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-lg text-white truncate">{biller.name}</h3>
+                  <h3 className="font-bold text-base text-white truncate">{biller.name}</h3>
                   <button
                     onClick={() => deleteMutation.mutate({ billerId: biller.id })}
                     className="p-1.5 text-white/30 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 shrink-0"
