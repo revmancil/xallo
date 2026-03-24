@@ -14,12 +14,17 @@ import { BillerIcon } from "@/components/biller-icon";
 import { format, parseISO } from "date-fns";
 import {
   CheckCircle2, Check, History, Hash, X, Plus,
-  Pencil, Trash2, Loader2, CalendarDays,
+  Pencil, Trash2, Loader2, CalendarDays, FileScan,
+  Upload, AlertTriangle,
 } from "lucide-react";
+import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+
+const API_BASE = import.meta.env.BASE_URL + "api";
 
 type ConfirmDialog = { billId: number; confirmationNumber: string };
 type EditForm = { billId: number; amountDue: string; dueDate: string; status: string };
+type ScanResult = { amountDue: number | null; dueDate: string | null; billerHint: string | null; confidence: string; pages: number };
 
 const STATUS_OPTIONS = ["unpaid", "scheduled", "paid", "overdue"];
 
@@ -30,6 +35,13 @@ export default function Bills() {
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [scanError, setScanError] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [scanBillerId, setScanBillerId] = useState("");
+  const [scanSaved, setScanSaved] = useState(false);
+  const scanFileRef = useRef<HTMLInputElement>(null);
 
   const { data: bills, isLoading } = useGetBillInstances();
   const { data: billers } = useGetBillers();
@@ -64,6 +76,35 @@ export default function Bills() {
     setTimeout(() => {
       setJustPaidIds(prev => { const s = new Set(prev); s.delete(billId); return s; });
     }, 1600);
+  };
+
+  const handleScanFile = async (file: File) => {
+    setScanning(true);
+    setScanError("");
+    setScanResult(null);
+    setScanSaved(false);
+    setScanBillerId("");
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch(`${API_BASE}/pdf/parse`, { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setScanResult(data);
+    } catch (e: any) {
+      setScanError(e.message || "Failed to parse PDF.");
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleScanSave = () => {
+    if (!scanResult?.amountDue || !scanResult?.dueDate || !scanBillerId) return;
+    createMutation.mutate({
+      data: { billerId: parseInt(scanBillerId), amountDue: scanResult.amountDue, dueDate: scanResult.dueDate, status: "unpaid" }
+    }, {
+      onSuccess: () => { setScanSaved(true); }
+    });
   };
 
   const handleAddSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -129,12 +170,24 @@ export default function Bills() {
 
         <div className="flex items-center gap-2">
           {view === "bills" && (
-            <button
-              onClick={() => { setIsAdding(!isAdding); setEditForm(null); }}
-              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold shadow-lg shadow-primary/25 transition-all"
-            >
-              <Plus className="w-4 h-4" /> Add Bill
-            </button>
+            <>
+              <button
+                onClick={() => { setIsScanning(!isScanning); setIsAdding(false); setScanResult(null); setScanError(""); setScanSaved(false); }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold border transition-all ${
+                  isScanning
+                    ? "bg-violet-600/20 border-violet-500/40 text-violet-300"
+                    : "bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                <FileScan className="w-4 h-4" /> Scan PDF
+              </button>
+              <button
+                onClick={() => { setIsAdding(!isAdding); setIsScanning(false); setEditForm(null); }}
+                className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold shadow-lg shadow-primary/25 transition-all"
+              >
+                <Plus className="w-4 h-4" /> Add Bill
+              </button>
+            </>
           )}
           <div className="flex items-center gap-1 bg-card border border-white/10 rounded-xl p-1">
             <button
@@ -236,6 +289,112 @@ export default function Bills() {
             </button>
           </div>
         </form>
+      )}
+
+      {/* PDF Scanner Panel */}
+      {isScanning && (
+        <div className="glass-panel p-6 rounded-2xl border border-violet-500/20 space-y-4 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <FileScan className="w-4 h-4 text-violet-400" /> Scan PDF Bill
+            </h3>
+            <button onClick={() => setIsScanning(false)} className="text-muted-foreground hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div
+            className="border-2 border-dashed border-white/10 hover:border-violet-500/40 rounded-xl p-8 text-center cursor-pointer transition-colors group"
+            onClick={() => scanFileRef.current?.click()}
+            onDragOver={e => e.preventDefault()}
+            onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleScanFile(f); }}
+          >
+            <input
+              ref={scanFileRef}
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              onChange={e => { const f = e.target.files?.[0]; if (f) handleScanFile(f); if (e.target) e.target.value = ""; }}
+            />
+            {scanning ? (
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="w-10 h-10 text-violet-400 animate-spin" />
+                <p className="text-sm text-white font-medium">Reading PDF…</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <Upload className="w-10 h-10 text-muted-foreground/50 group-hover:text-violet-400/70 transition-colors" />
+                <p className="text-sm font-medium text-white">Drop your PDF bill here or click to browse</p>
+                <p className="text-xs text-muted-foreground">Text-based PDFs only · Max 10 MB</p>
+              </div>
+            )}
+          </div>
+
+          {scanError && (
+            <div className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-sm text-rose-300">
+              <AlertTriangle className="w-4 h-4 shrink-0" /> {scanError}
+            </div>
+          )}
+
+          {scanResult && (
+            <div className="space-y-4 animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                  scanResult.confidence === "high" ? "text-emerald-300 bg-emerald-500/10 border-emerald-500/20" :
+                  scanResult.confidence === "partial" ? "text-amber-300 bg-amber-500/10 border-amber-500/20" :
+                  "text-rose-300 bg-rose-500/10 border-rose-500/20"
+                }`}>
+                  {scanResult.confidence === "high" ? "✓ High confidence" : scanResult.confidence === "partial" ? "⚠ Partial match" : "Low confidence"}
+                </span>
+                <span className="text-xs text-muted-foreground">{scanResult.pages} page{scanResult.pages !== 1 ? "s" : ""}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Amount Due</p>
+                  <p className="text-2xl font-display font-bold text-white">
+                    {scanResult.amountDue !== null ? formatCurrency(scanResult.amountDue) : <span className="text-muted-foreground text-base">Not found</span>}
+                  </p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Due Date</p>
+                  <p className="text-xl font-bold text-white">
+                    {scanResult.dueDate || <span className="text-muted-foreground text-base">Not found</span>}
+                  </p>
+                </div>
+              </div>
+
+              {scanResult.amountDue && scanResult.dueDate && !scanSaved && (
+                <div className="flex items-center gap-3 p-4 bg-white/3 border border-white/10 rounded-xl">
+                  <select
+                    value={scanBillerId}
+                    onChange={e => setScanBillerId(e.target.value)}
+                    className="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-primary outline-none"
+                  >
+                    <option value="">Assign to biller…</option>
+                    {billers?.map((b: any) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleScanSave}
+                    disabled={!scanBillerId || createMutation.isPending}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-primary/25"
+                  >
+                    {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    Add to Bills
+                  </button>
+                </div>
+              )}
+
+              {scanSaved && (
+                <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-sm text-emerald-300">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" /> Bill added! Upload another PDF or close this panel.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {view === "bills" && (
