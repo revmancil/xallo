@@ -129,11 +129,22 @@ Security routes (no codegen):
 - `POST /api/security/2fa/disable` — disable 2FA
 - `POST /api/pdf/parse` — parse PDF bill (multipart/form-data, field: `file`)
 
-Packages installed in api-server: plaid, multer, speakeasy, qrcode, pdf-parse@1.1.1 (+ @types)
+Gmail Import routes (no codegen — raw fetch in frontend):
+- `POST /api/gmail/sync` — scan Gmail inbox for bill emails (last 90 days); requires auth (not available in demo mode)
+- `GET /api/gmail/imports` — list email imports for user
+- `POST /api/gmail/imports/:id/create-bill` — create a bill instance from an import (body: `{ billerId }`)
+- `DELETE /api/gmail/imports/:id` — dismiss/delete an import
+
+Gmail client: `artifacts/api-server/src/lib/gmail-client.ts`
+- Uses Replit connector `google-mail` (connection ID: `conn_google-mail_01KMGA02202SHG8SD2FV4GX4DJ`)
+- NOTE: If Gmail stops working, call `proposeIntegration("connection:conn_google-mail_01KMGA02202SHG8SD2FV4GX4DJ")` to re-authorize
+- Never cache the Gmail client — tokens expire; always call `getUncachableGmailClient()` fresh
+
+Packages installed in api-server: plaid, multer, speakeasy, qrcode, pdf-parse@1.1.1, googleapis@148.0.0 (+ @types)
 
 ### `artifacts/prism-clone` (`@workspace/prism-clone`)
 
-React + Vite frontend at `/` (root path). Pages: Dashboard, Bills, Calendar, Billers, Income, Accounts, Analytics, Security.
+React + Vite frontend at `/` (root path). Pages: Dashboard, Bills, Calendar, Billers, Income, Accounts, Analytics, Security, Budget, Gmail Import.
 
 **Responsive design**: Fully responsive for phone, tablet, and desktop.
 - Bottom nav (mobile) uses 6 items with `flex-1` layout — all fit without overflow.

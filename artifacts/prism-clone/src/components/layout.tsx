@@ -11,6 +11,7 @@ import {
   BarChart2,
   Shield,
   PiggyBank,
+  Mail,
   LogOut,
   LogIn
 } from "lucide-react";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/accounts", label: "Accounts", icon: Landmark },
   { href: "/budget", label: "Budget", icon: PiggyBank },
   { href: "/analytics", label: "Analytics", icon: BarChart2 },
+  { href: "/gmail-import", label: "Gmail Import", icon: Mail },
   { href: "/security", label: "Security", icon: Shield },
 ];
 
