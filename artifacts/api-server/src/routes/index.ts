@@ -10,6 +10,7 @@ import plaidRouter from "./plaid";
 import analyticsRouter from "./analytics";
 import securityLogRouter from "./security-log";
 import pdfUploadRouter from "./pdf-upload";
+import budgetRouter from "./budget";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(plaidRouter);
 router.use(analyticsRouter);
 router.use(securityLogRouter);
 router.use(pdfUploadRouter);
+router.use(budgetRouter);
 
 export default router;

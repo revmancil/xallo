@@ -11,6 +11,7 @@ import Income from "./pages/income";
 import Accounts from "./pages/accounts";
 import Analytics from "./pages/analytics";
 import Security from "./pages/security";
+import Budget from "./pages/budget";
 import NotFound from "./pages/not-found";
 
 const queryClient = new QueryClient({
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/accounts" component={Accounts} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/security" component={Security} />
+      <Route path="/budget" component={Budget} />
       <Route component={NotFound} />
     </Switch>
   );

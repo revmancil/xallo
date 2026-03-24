@@ -10,6 +10,7 @@ import {
   Landmark,
   BarChart2,
   Shield,
+  PiggyBank,
   LogOut,
   LogIn
 } from "lucide-react";
@@ -24,11 +25,19 @@ const navItems = [
   { href: "/billers", label: "Billers", icon: Users },
   { href: "/income", label: "Income", icon: Wallet },
   { href: "/accounts", label: "Accounts", icon: Landmark },
+  { href: "/budget", label: "Budget", icon: PiggyBank },
   { href: "/analytics", label: "Analytics", icon: BarChart2 },
   { href: "/security", label: "Security", icon: Shield },
 ];
 
-const mobileNavItems = navItems.slice(0, 6);
+const mobileNavItems = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/bills", label: "Bills", icon: Receipt },
+  { href: "/billers", label: "Billers", icon: Users },
+  { href: "/budget", label: "Budget", icon: PiggyBank },
+  { href: "/income", label: "Income", icon: Wallet },
+  { href: "/accounts", label: "Accounts", icon: Landmark },
+];
 
 export default function Layout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
