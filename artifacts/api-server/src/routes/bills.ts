@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, billInstancesTable, billersTable } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 import { CreateBillInstanceBody, UpdateBillInstanceBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -99,6 +99,99 @@ router.delete("/bills/:billId", async (req, res) => {
     .delete(billInstancesTable)
     .where(and(eq(billInstancesTable.id, billId), eq(billInstancesTable.userId, userId)));
   res.json({ success: true });
+});
+
+function advanceDate(date: Date, recurrence: string): Date {
+  const next = new Date(date);
+  switch (recurrence) {
+    case "monthly":    next.setMonth(next.getMonth() + 1); break;
+    case "biweekly":  next.setDate(next.getDate() + 14); break;
+    case "weekly":    next.setDate(next.getDate() + 7); break;
+    case "quarterly": next.setMonth(next.getMonth() + 3); break;
+    case "yearly":    next.setFullYear(next.getFullYear() + 1); break;
+    default:          next.setMonth(next.getMonth() + 1);
+  }
+  return next;
+}
+
+function daysApart(a: Date, b: Date): number {
+  return Math.abs(a.getTime() - b.getTime()) / (1000 * 60 * 60 * 24);
+}
+
+router.post("/bills/generate-recurring", async (req, res) => {
+  const userId = getUserId(req);
+
+  const billersList = await db
+    .select()
+    .from(billersTable)
+    .where(eq(billersTable.userId, userId));
+
+  const recurringBillers = billersList.filter(
+    b => b.recurrence !== "one-time" && b.typicalAmount != null
+  );
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const cutoff = new Date(today);
+  cutoff.setMonth(cutoff.getMonth() + 3);
+
+  const created: { biller: string; dueDate: string }[] = [];
+  const skipped: string[] = [];
+
+  for (const biller of recurringBillers) {
+    const existingBills = await db
+      .select({ dueDate: billInstancesTable.dueDate })
+      .from(billInstancesTable)
+      .where(and(eq(billInstancesTable.billerId, biller.id), eq(billInstancesTable.userId, userId)));
+
+    const existingDates = existingBills.map(b => new Date(b.dueDate));
+
+    const latestBills = await db
+      .select({ dueDate: billInstancesTable.dueDate })
+      .from(billInstancesTable)
+      .where(and(eq(billInstancesTable.billerId, biller.id), eq(billInstancesTable.userId, userId)))
+      .orderBy(desc(billInstancesTable.dueDate))
+      .limit(1);
+
+    let nextDate: Date;
+    if (latestBills.length > 0) {
+      nextDate = advanceDate(new Date(latestBills[0].dueDate), biller.recurrence);
+    } else {
+      if (biller.recurrence === "monthly" && biller.dueDayOfMonth) {
+        nextDate = new Date(today.getFullYear(), today.getMonth(), biller.dueDayOfMonth);
+        if (nextDate < today) nextDate = advanceDate(nextDate, "monthly");
+      } else {
+        nextDate = new Date(today);
+      }
+    }
+
+    let attempts = 0;
+    while (nextDate <= cutoff && attempts < 20) {
+      attempts++;
+      const dateStr = nextDate.toISOString().split("T")[0];
+      const nearbyExists = existingDates.some(d => daysApart(d, nextDate) < 5);
+
+      if (!nearbyExists) {
+        await db.insert(billInstancesTable).values({
+          userId,
+          billerId: biller.id,
+          amountDue: String(biller.typicalAmount),
+          dueDate: dateStr,
+          status: nextDate < today ? "overdue" : "unpaid",
+        });
+        created.push({ biller: biller.name, dueDate: dateStr });
+        existingDates.push(new Date(dateStr));
+      }
+
+      nextDate = advanceDate(nextDate, biller.recurrence);
+    }
+
+    if (attempts === 0 || existingBills.length > 0 && created.filter(c => c.biller === biller.name).length === 0) {
+      skipped.push(biller.name);
+    }
+  }
+
+  res.json({ created, count: created.length, skipped });
 });
 
 export default router;

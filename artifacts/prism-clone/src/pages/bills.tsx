@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useGetBillInstances,
   useUpdateBillInstance,
@@ -15,7 +15,7 @@ import { format, parseISO } from "date-fns";
 import {
   CheckCircle2, Check, History, Hash, X, Plus,
   Pencil, Trash2, Loader2, CalendarDays, FileScan,
-  Upload, AlertTriangle,
+  Upload, AlertTriangle, Sparkles, RefreshCw,
 } from "lucide-react";
 import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -42,10 +42,29 @@ export default function Bills() {
   const [scanBillerId, setScanBillerId] = useState("");
   const [scanSaved, setScanSaved] = useState(false);
   const scanFileRef = useRef<HTMLInputElement>(null);
+  const [autoFillBanner, setAutoFillBanner] = useState<{ count: number; names: string[] } | null>(null);
+  const [autoFilling, setAutoFilling] = useState(false);
 
   const { data: bills, isLoading } = useGetBillInstances();
   const { data: billers } = useGetBillers();
   const queryClient = useQueryClient();
+
+  const runAutoFill = async (silent = false) => {
+    if (!silent) setAutoFilling(true);
+    try {
+      const res = await fetch(`${API_BASE}/bills/generate-recurring`, { method: "POST" });
+      const data = await res.json();
+      if (data.count > 0) {
+        const uniqueNames = [...new Set(data.created.map((c: any) => c.biller))] as string[];
+        setAutoFillBanner({ count: data.count, names: uniqueNames });
+        invalidate();
+      }
+    } catch {}
+    if (!silent) setAutoFilling(false);
+  };
+
+  // Silently auto-fill recurring bills on first load
+  useEffect(() => { runAutoFill(true); }, []);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: getGetBillInstancesQueryKey() });
@@ -172,6 +191,15 @@ export default function Bills() {
           {view === "bills" && (
             <>
               <button
+                onClick={() => runAutoFill(false)}
+                disabled={autoFilling}
+                title="Auto-generate upcoming bills from recurring billers"
+                className="flex items-center gap-2 px-3 py-2 rounded-xl font-semibold border border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50"
+              >
+                {autoFilling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                <span className="hidden sm:inline">Auto-fill</span>
+              </button>
+              <button
                 onClick={() => { setIsScanning(!isScanning); setIsAdding(false); setScanResult(null); setScanError(""); setScanSaved(false); }}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold border transition-all ${
                   isScanning
@@ -209,6 +237,24 @@ export default function Bills() {
           </div>
         </div>
       </div>
+
+      {/* Auto-fill success banner */}
+      {autoFillBanner && (
+        <div className="flex items-start gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl animate-in fade-in slide-in-from-top-2">
+          <Sparkles className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-emerald-300">
+              {autoFillBanner.count} upcoming bill{autoFillBanner.count !== 1 ? "s" : ""} auto-generated
+            </p>
+            <p className="text-xs text-emerald-400/70 mt-0.5">
+              Added the next 3 months for: {autoFillBanner.names.join(", ")}
+            </p>
+          </div>
+          <button onClick={() => setAutoFillBanner(null)} className="text-emerald-400/60 hover:text-emerald-300 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Add Bill Form */}
       {isAdding && (
