@@ -20,14 +20,12 @@ function parseCreateBody(body: any) {
     return { error: "category is required" };
   }
   const validRecurrences = ["monthly", "biweekly", "weekly", "one-time"];
-  if (!validRecurrences.includes(recurrence)) {
-    return { error: "recurrence must be one of: monthly, biweekly, weekly, one-time" };
-  }
+  const resolvedRecurrence = validRecurrences.includes(recurrence) ? recurrence : "monthly";
   return {
     data: {
       name: name.trim(),
       category: category.trim(),
-      recurrence,
+      recurrence: resolvedRecurrence,
       typicalAmount: typicalAmount != null ? Number(typicalAmount) : null,
       dueDayOfMonth: dueDayOfMonth != null ? Number(dueDayOfMonth) : null,
       websiteUrl: typeof websiteUrl === "string" && websiteUrl.trim() !== "" ? websiteUrl.trim() : null,
@@ -59,8 +57,11 @@ router.get("/billers", async (req, res) => {
 
 router.post("/billers", async (req, res) => {
   const userId = getUserId(req);
+  console.log("[billers POST] content-type:", req.headers["content-type"]);
+  console.log("[billers POST] body:", JSON.stringify(req.body));
   const parsed = parseCreateBody(req.body);
   if ("error" in parsed) {
+    console.log("[billers POST] validation error:", parsed.error);
     res.status(400).json({ error: parsed.error });
     return;
   }
