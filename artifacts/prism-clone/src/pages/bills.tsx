@@ -5,8 +5,10 @@ import {
   useCreateBillInstance,
   useDeleteBillInstance,
   useGetBillers,
+  useCreateBiller,
   getGetBillInstancesQueryKey,
   getGetDashboardSummaryQueryKey,
+  getGetBillersQueryKey,
 } from "@workspace/api-client-react";
 import { formatCurrency } from "@/lib/utils";
 import { StatusBadge } from "@/components/status-badge";
@@ -15,7 +17,7 @@ import { format, parseISO } from "date-fns";
 import {
   CheckCircle2, Check, History, Hash, X, Plus,
   Pencil, Trash2, Loader2, CalendarDays, FileScan,
-  Upload, AlertTriangle, Sparkles, RefreshCw, Receipt,
+  Upload, AlertTriangle, Sparkles, RefreshCw, Receipt, UserPlus,
 } from "lucide-react";
 import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -41,6 +43,10 @@ export default function Bills() {
   const [scanning, setScanning] = useState(false);
   const [scanBillerId, setScanBillerId] = useState("");
   const [scanSaved, setScanSaved] = useState(false);
+  const [showNewBiller, setShowNewBiller] = useState(false);
+  const [newBillerName, setNewBillerName] = useState("");
+  const [newBillerCategory, setNewBillerCategory] = useState("Utilities");
+  const [savingBiller, setSavingBiller] = useState(false);
   const scanFileRef = useRef<HTMLInputElement>(null);
   const [autoFillBanner, setAutoFillBanner] = useState<{ count: number; names: string[] } | null>(null);
   const [autoFilling, setAutoFilling] = useState(false);
@@ -74,6 +80,22 @@ export default function Bills() {
   const updateMutation = useUpdateBillInstance({ mutation: { onSuccess: invalidate } });
   const createMutation = useCreateBillInstance({ mutation: { onSuccess: () => { invalidate(); setIsAdding(false); } } });
   const deleteMutation = useDeleteBillInstance({ mutation: { onSuccess: invalidate } });
+  const createBillerMutation = useCreateBiller({
+    mutation: {
+      onSuccess: (newBiller: any) => {
+        queryClient.invalidateQueries({ queryKey: getGetBillersQueryKey() });
+        setScanBillerId(String(newBiller.id));
+        setShowNewBiller(false);
+        setNewBillerName("");
+        setNewBillerCategory("Utilities");
+      }
+    }
+  });
+
+  const handleCreateScanBiller = () => {
+    if (!newBillerName.trim()) return;
+    createBillerMutation.mutate({ data: { name: newBillerName.trim(), category: newBillerCategory } });
+  };
 
   const handleMarkPaidClick = (id: number) => {
     setConfirmDialog({ billId: id, confirmationNumber: "" });
@@ -103,6 +125,8 @@ export default function Bills() {
     setScanResult(null);
     setScanSaved(false);
     setScanBillerId("");
+    setShowNewBiller(false);
+    setNewBillerName("");
     const fd = new FormData();
     fd.append("file", file);
     try {
@@ -200,7 +224,7 @@ export default function Bills() {
                 <span className="hidden sm:inline text-sm">Auto-fill</span>
               </button>
               <button
-                onClick={() => { setIsScanning(!isScanning); setIsAdding(false); setScanResult(null); setScanError(""); setScanSaved(false); }}
+                onClick={() => { setIsScanning(!isScanning); setIsAdding(false); setScanResult(null); setScanError(""); setScanSaved(false); setShowNewBiller(false); setNewBillerName(""); }}
                 title="Scan PDF"
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl font-semibold border transition-all ${
                   isScanning
@@ -416,25 +440,78 @@ export default function Bills() {
               </div>
 
               {scanResult.amountDue && scanResult.dueDate && !scanSaved && (
-                <div className="flex items-center gap-3 p-4 bg-white/3 border border-white/10 rounded-xl">
-                  <select
-                    value={scanBillerId}
-                    onChange={e => setScanBillerId(e.target.value)}
-                    className="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-primary outline-none"
-                  >
-                    <option value="">Assign to biller…</option>
-                    {billers?.map((b: any) => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={handleScanSave}
-                    disabled={!scanBillerId || createMutation.isPending}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-primary/25"
-                  >
-                    {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                    Add to Bills
-                  </button>
+                <div className="space-y-3 p-4 bg-white/3 border border-white/10 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <select
+                      value={scanBillerId}
+                      onChange={e => { setScanBillerId(e.target.value); setShowNewBiller(false); }}
+                      className="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-primary outline-none"
+                    >
+                      <option value="">Select a biller…</option>
+                      {billers?.map((b: any) => (
+                        <option key={b.id} value={b.id}>{b.name}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleScanSave}
+                      disabled={!scanBillerId || createMutation.isPending}
+                      className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-primary/25 shrink-0"
+                    >
+                      {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                      Add to Bills
+                    </button>
+                  </div>
+
+                  {/* Quick-create biller */}
+                  {!showNewBiller ? (
+                    <button
+                      onClick={() => setShowNewBiller(true)}
+                      className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 transition-colors"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      Biller not in the list? Create one
+                    </button>
+                  ) : (
+                    <div className="space-y-2 pt-1 border-t border-white/10">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">New Biller</p>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="text"
+                          placeholder="Biller name…"
+                          value={newBillerName}
+                          onChange={e => setNewBillerName(e.target.value)}
+                          onKeyDown={e => { if (e.key === "Enter") handleCreateScanBiller(); if (e.key === "Escape") setShowNewBiller(false); }}
+                          autoFocus
+                          className="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-violet-500 outline-none placeholder:text-muted-foreground/50"
+                        />
+                        <select
+                          value={newBillerCategory}
+                          onChange={e => setNewBillerCategory(e.target.value)}
+                          className="bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-violet-500 outline-none"
+                        >
+                          {["Housing","Utilities","Entertainment","Subscriptions","Insurance","Health","Food","Transport"].map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleCreateScanBiller}
+                          disabled={!newBillerName.trim() || createBillerMutation.isPending}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white rounded-lg transition-all disabled:opacity-50"
+                        >
+                          {createBillerMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                          Create &amp; Select
+                        </button>
+                        <button
+                          onClick={() => setShowNewBiller(false)}
+                          className="text-xs text-muted-foreground hover:text-white transition-colors px-2 py-1.5"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
