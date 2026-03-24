@@ -16,42 +16,83 @@ function getUserId(req: any): string {
 
 // ─── Bill data extraction ─────────────────────────────────────────────────────
 
-function extractBillData(text: string) {
-  const amountPatterns = [
-    /(?:amount\s+due|total\s+due|balance\s+due|payment\s+due|total\s+amount|please\s+pay)[:\s]*\$?\s*([0-9,]+\.?[0-9]{0,2})/i,
-    /(?:minimum\s+payment|amount\s+owed)[:\s]*\$?\s*([0-9,]+\.?[0-9]{0,2})/i,
+const MONTHS = "January|February|March|April|May|June|July|August|September|October|November|December";
+
+function extractAmountDue(flat: string): number | null {
+  const patterns = [
+    /(?:total\s+amount\s+due|amount\s+due|total\s+due|balance\s+due|payment\s+due|please\s+pay|amount\s+owed)[:\s]*\$?\s*([0-9,]+\.?[0-9]{0,2})/i,
+    /(?:minimum\s+payment|min\s+payment)[:\s]*\$?\s*([0-9,]+\.?[0-9]{0,2})/i,
     /\$\s*([0-9,]+\.[0-9]{2})\s*(?:due|owed|payable)/i,
   ];
-  let amountDue: number | null = null;
-  for (const p of amountPatterns) {
-    const m = text.match(p);
+  for (const p of patterns) {
+    const m = flat.match(p);
     if (m) {
       const val = parseFloat(m[1].replace(/,/g, ""));
-      if (!isNaN(val) && val > 0 && val < 100000) { amountDue = Math.round(val * 100) / 100; break; }
+      if (!isNaN(val) && val > 0 && val < 100000) return Math.round(val * 100) / 100;
     }
   }
-
-  const datePatterns = [
-    /(?:due\s+date|payment\s+due|due\s+by|pay\s+by)[:\s]*([A-Za-z]+\.?\s+[0-9]{1,2},?\s+[0-9]{4})/i,
-    /(?:due\s+date|payment\s+due|due\s+by)[:\s]*([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})/i,
-    /(?:due\s+date|billing\s+date)[:\s]*([0-9]{4}-[0-9]{2}-[0-9]{2})/i,
-  ];
-  let dueDate: string | null = null;
-  for (const p of datePatterns) {
-    const m = text.match(p);
-    if (m) {
-      const parsed = new Date(m[1]);
-      dueDate = !isNaN(parsed.getTime()) ? parsed.toISOString().split("T")[0] : m[1].trim();
-      break;
-    }
-  }
-
-  return { amountDue, dueDate };
+  return null;
 }
 
-function extractSenderName(from: string): string {
-  const m = from.match(/^([^<]+)</);
-  if (m) return m[1].trim().replace(/["']/g, "");
+function extractDueDate(flat: string, allowFloating = false): string | null {
+  // Explicit labeled patterns (safest — require a label like "Due Date:")
+  const labeled = [
+    /(?:due\s+date|payment\s+due|due\s+by|pay\s+by)[:\s]+([A-Za-z]+\.?\s+[0-9]{1,2},?\s+[0-9]{4})/i,
+    /(?:due\s+date|payment\s+due|due\s+by)[:\s]+([0-9]{1,2}[\/\-][0-9]{1,2}[\/\-][0-9]{2,4})/i,
+    /(?:due\s+date|billing\s+date)[:\s]+([0-9]{4}-[0-9]{2}-[0-9]{2})/i,
+  ];
+  for (const p of labeled) {
+    const m = flat.match(p);
+    if (m) {
+      const parsed = new Date(m[1]);
+      if (!isNaN(parsed.getTime())) return parsed.toISOString().split("T")[0];
+    }
+  }
+
+  // Floating fallback (only enabled for PDFs — avoids picking up email "Sent:" dates)
+  if (allowFloating) {
+    const floating = new RegExp(`((?:${MONTHS})\\s+\\d{1,2},?\\s+\\d{4})`, "ig");
+    const allDates: Date[] = [];
+    let fm: RegExpExecArray | null;
+    while ((fm = floating.exec(flat)) !== null) {
+      const d = new Date(fm[1]);
+      if (!isNaN(d.getTime())) allDates.push(d);
+    }
+    if (allDates.length > 0) {
+      allDates.sort((a, b) => a.getTime() - b.getTime());
+      return allDates[0].toISOString().split("T")[0];
+    }
+  }
+
+  return null;
+}
+
+function extractBillData(text: string, allowFloatingDate = false) {
+  const flat = text.replace(/\n+/g, " ").replace(/\s{2,}/g, " ");
+  return {
+    amountDue: extractAmountDue(flat),
+    dueDate: extractDueDate(flat, allowFloatingDate),
+  };
+}
+
+function extractBillerHint(from: string, subject: string): string {
+  // For forwarded emails, extract the biller from subject (e.g. "Fw: City of Frisco, TX Utility Bill")
+  const fwMatch = subject.match(/^(?:Fw:|Fwd:)\s*(.+?)(?:\s*-\s*|\s*bill\b|\s*statement\b|\s*invoice\b|$)/i);
+  if (fwMatch) return fwMatch[1].trim();
+
+  // Try to extract from sender name
+  const nameMatch = from.match(/^([^<]+)</);
+  if (nameMatch) {
+    const name = nameMatch[1].trim().replace(/["']/g, "");
+    // Prefer domain-derived names for no-reply addresses
+    if (/no.?reply|donotreply|notification|billing|invoice/i.test(name)) {
+      const domain = from.match(/@([^>]+)/)?.[1]?.split(".").slice(0, -1).join(".");
+      if (domain) return domain.charAt(0).toUpperCase() + domain.slice(1);
+    }
+    return name;
+  }
+
+  // Fallback to domain
   const domain = from.split("@")[1]?.split(".")[0] || from;
   return domain.charAt(0).toUpperCase() + domain.slice(1);
 }
@@ -74,7 +115,6 @@ router.get("/gmail/inbox", async (_req, res) => {
 
 router.get("/gmail/imports", async (req: any, res) => {
   const userId = getUserId(req);
-  if (userId === DEMO_USER_ID) { res.json([]); return; }
   try {
     const imports = await db
       .select()
@@ -93,10 +133,6 @@ router.get("/gmail/imports", async (req: any, res) => {
 
 router.post("/gmail/sync", async (req: any, res) => {
   const userId = getUserId(req);
-  if (userId === DEMO_USER_ID) {
-    res.status(403).json({ error: "Email sync requires you to be logged in. Please sign in first." });
-    return;
-  }
 
   try {
     const inbox = getBillsInbox();
@@ -128,29 +164,40 @@ router.post("/gmail/sync", async (req: any, res) => {
         || "";
 
       const searchText = `${msg.subject} ${bodyText}`;
-      let { amountDue, dueDate } = extractBillData(searchText);
+      // Parse body with strict date matching only (no floating — avoids "Sent: March 16" in forwards)
+      let { amountDue, dueDate } = extractBillData(searchText, false);
 
-      // Try PDF attachments if body parsing wasn't enough
-      if ((!amountDue || !dueDate) && full?.attachments?.length) {
-        for (const att of full.attachments.filter(a => a.content_type === "application/pdf").slice(0, 2)) {
+      // Always try PDF attachments — PDF data is authoritative and overrides email body
+      if (full?.attachments?.length) {
+        for (const att of full.attachments.filter((a: any) => a.content_type === "application/pdf").slice(0, 2)) {
           try {
-            const attRes = await fetch(
+            // Step 1: get attachment metadata which includes a signed download_url
+            const metaRes = await fetch(
               `https://api.agentmail.to/v0/inboxes/${encodeURIComponent(inbox)}/messages/${encodeURIComponent(msg.message_id)}/attachments/${att.attachment_id}`,
               { headers: { Authorization: `Bearer ${process.env.AGENTMAIL_API_KEY}` } }
             );
-            if (attRes.ok) {
-              const buf = Buffer.from(await attRes.arrayBuffer());
-              const parsed = await pdfParse(buf);
-              const fromPdf = extractBillData(parsed.text);
-              if (!amountDue && fromPdf.amountDue) amountDue = fromPdf.amountDue;
-              if (!dueDate && fromPdf.dueDate) dueDate = fromPdf.dueDate;
-              if (amountDue && dueDate) break;
-            }
-          } catch { /* skip */ }
+            if (!metaRes.ok) continue;
+            const meta = await metaRes.json() as any;
+            const downloadUrl = meta.download_url;
+            if (!downloadUrl) continue;
+
+            // Step 2: download the actual PDF binary from the CDN URL
+            const pdfRes = await fetch(downloadUrl);
+            if (!pdfRes.ok) continue;
+            const buf = Buffer.from(await pdfRes.arrayBuffer());
+            const parsed = await pdfParse(buf);
+            // Parse PDF with floating date allowed; PDF always wins over email body
+            const fromPdf = extractBillData(parsed.text, true);
+            if (fromPdf.amountDue) amountDue = fromPdf.amountDue;
+            if (fromPdf.dueDate) dueDate = fromPdf.dueDate;
+            if (amountDue && dueDate) break;
+          } catch (e: any) {
+            console.error("PDF parse error:", e.message);
+          }
         }
       }
 
-      const billerHint = extractSenderName(msg.from);
+      const billerHint = extractBillerHint(msg.from, msg.subject);
       const receivedAt = new Date(msg.timestamp);
 
       newImports.push({
