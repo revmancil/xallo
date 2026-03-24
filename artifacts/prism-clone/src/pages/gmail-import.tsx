@@ -58,17 +58,8 @@ export default function GmailImport() {
 
   const { data: billers } = useGetBillers();
   const queryClient = useQueryClient();
-  const createBillerMutation = useCreateBiller({
-    mutation: {
-      onSuccess: (newBiller: any, _vars: any, ctx: any) => {
-        queryClient.invalidateQueries({ queryKey: getGetBillersQueryKey() });
-        const importId = ctx as number;
-        setBillerSelections(prev => ({ ...prev, [importId]: String(newBiller.id) }));
-        setShowNewBiller(prev => ({ ...prev, [importId]: false }));
-        setNewBillerName(prev => ({ ...prev, [importId]: "" }));
-      }
-    }
-  });
+  // No global onSuccess — we pass per-call onSuccess in mutate() to capture importId via closure
+  const createBillerMutation = useCreateBiller();
 
   useEffect(() => {
     fetch(`${API_BASE}/gmail/inbox`)
@@ -82,7 +73,13 @@ export default function GmailImport() {
     try {
       const res = await fetch(`${API_BASE}/gmail/imports`);
       const data = await res.json();
-      if (Array.isArray(data)) setImports(data);
+      if (Array.isArray(data)) {
+        setImports(data);
+        // Auto-expand all "ready" cards so the biller dropdown is immediately visible
+        const autoExpand: Record<number, boolean> = {};
+        data.filter((i: any) => i.status === "ready").forEach((i: any) => { autoExpand[i.id] = true; });
+        setExpanded(prev => ({ ...prev, ...autoExpand }));
+      }
       setLoaded(true);
     } catch {}
   };
@@ -96,6 +93,12 @@ export default function GmailImport() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Sync failed");
       setSyncResult({ synced: data.synced, skipped: data.skipped });
+      // Auto-expand any newly synced ready imports
+      if (data.imports?.length) {
+        const autoExpand: Record<number, boolean> = {};
+        data.imports.filter((i: any) => i.status === "ready").forEach((i: any) => { autoExpand[i.id] = true; });
+        setExpanded(prev => ({ ...prev, ...autoExpand }));
+      }
       await loadImports();
     } catch (e: any) {
       setSyncError(e.message || "Failed to sync");
@@ -129,7 +132,17 @@ export default function GmailImport() {
     const name = newBillerName[importId]?.trim();
     const category = newBillerCategory[importId] || "Utilities";
     if (!name) return;
-    createBillerMutation.mutate({ data: { name, category } }, { context: importId });
+    createBillerMutation.mutate(
+      { data: { name, category } },
+      {
+        onSuccess: (newBiller: any) => {
+          queryClient.invalidateQueries({ queryKey: getGetBillersQueryKey() });
+          setBillerSelections(prev => ({ ...prev, [importId]: String(newBiller.id) }));
+          setShowNewBiller(prev => ({ ...prev, [importId]: false }));
+          setNewBillerName(prev => ({ ...prev, [importId]: "" }));
+        },
+      }
+    );
   };
 
   const ready = imports.filter(i => i.status === "ready");
