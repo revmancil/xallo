@@ -73,29 +73,28 @@ export default function Calendar() {
   const hasSelectedContent = selectedDayBills.length > 0 || selectedDayIncome.length > 0;
 
   return (
-    <div className="space-y-4 h-full flex flex-col">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-display font-bold text-gradient">Calendar</h1>
-          <div className="flex items-center gap-4 mt-1.5 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" /> Unpaid</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block" /> Overdue</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> Scheduled</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Paid / Payday</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 bg-card border border-white/10 rounded-xl p-1">
-          <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-white transition-colors">
-            <ChevronLeft className="w-5 h-5" />
+    <div className="space-y-3 h-full flex flex-col">
+      {/* Header: title + month nav on first row, legend below */}
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl sm:text-3xl font-display font-bold text-gradient shrink-0">Calendar</h1>
+        <div className="flex items-center gap-1 bg-card border border-white/10 rounded-xl p-1 shrink-0">
+          <button onClick={prevMonth} className="p-1.5 sm:p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-white transition-colors">
+            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
-          <span className="font-semibold w-32 text-center text-white">
-            {format(currentDate, "MMMM yyyy")}
+          <span className="font-semibold w-28 sm:w-32 text-center text-white text-sm sm:text-base">
+            {format(currentDate, "MMM yyyy")}
           </span>
-          <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-white transition-colors">
-            <ChevronRight className="w-5 h-5" />
+          <button onClick={nextMonth} className="p-1.5 sm:p-2 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-white transition-colors">
+            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
+      </div>
+      {/* Legend row — always has enough space now */}
+      <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" /> Unpaid</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block" /> Overdue</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> Scheduled</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Paid / Payday</span>
       </div>
 
       <div className="flex-1 glass-panel rounded-2xl overflow-hidden flex flex-col border border-white/10">
@@ -114,22 +113,25 @@ export default function Calendar() {
             const isCurrentMonth = isSameMonth(day, monthStart);
             const isToday = isSameDay(day, new Date());
             const isSelected = selectedDay ? isSameDay(day, selectedDay) : false;
-            const hasEvents = dayBills.length > 0 || dayIncome.length > 0;
+            const totalEvents = dayBills.length + dayIncome.length;
+            const allEvents = [
+              ...dayIncome.map(inc => ({ id: `inc-${inc.id}`, dot: "bg-emerald-500", name: inc.label, isIncome: true })),
+              ...dayBills.map(bill => ({ id: `bill-${bill.id}`, dot: getStatusDot(bill.status), name: bill.biller?.name ?? "", isIncome: false })),
+            ];
 
             return (
               <div
                 key={day.toISOString()}
                 onClick={() => setSelectedDay(isSelected ? null : day)}
                 className={clsx(
-                  "bg-card min-h-[90px] p-2 flex flex-col cursor-pointer transition-all",
+                  "bg-card min-h-[70px] sm:min-h-[90px] p-1.5 sm:p-2 flex flex-col cursor-pointer transition-all",
                   !isCurrentMonth && "opacity-40",
                   isSelected ? "bg-primary/10 ring-1 ring-inset ring-primary/30" : "hover:bg-white/[0.04]",
-                  hasEvents && "cursor-pointer"
                 )}
               >
                 <div className="flex justify-between items-start">
                   <span className={clsx(
-                    "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
+                    "text-xs sm:text-sm font-medium w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full",
                     isToday
                       ? "bg-primary text-primary-foreground shadow-lg shadow-primary/40"
                       : isSelected
@@ -139,14 +141,27 @@ export default function Calendar() {
                     {format(day, "d")}
                   </span>
 
-                  {dayBills.length + dayIncome.length > 0 && (
-                    <span className="text-[9px] font-bold text-muted-foreground">
-                      {dayBills.length + dayIncome.length} event{dayBills.length + dayIncome.length > 1 ? "s" : ""}
+                  {totalEvents > 0 && (
+                    <span className="text-[9px] font-bold text-muted-foreground leading-none mt-0.5">
+                      {totalEvents}<span className="hidden sm:inline"> event{totalEvents > 1 ? "s" : ""}</span>
                     </span>
                   )}
                 </div>
 
-                <div className="mt-1 space-y-0.5 overflow-hidden max-h-[70px]">
+                {/* Mobile: just colored dots */}
+                {allEvents.length > 0 && (
+                  <div className="mt-1 flex sm:hidden flex-wrap gap-1 px-0.5">
+                    {allEvents.slice(0, 4).map(ev => (
+                      <span key={ev.id} className={clsx("w-2 h-2 rounded-full shrink-0", ev.dot)} />
+                    ))}
+                    {allEvents.length > 4 && (
+                      <span className="text-[8px] text-muted-foreground">+{allEvents.length - 4}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Desktop: text chips */}
+                <div className="mt-1 space-y-0.5 overflow-hidden max-h-[70px] hidden sm:block">
                   {dayIncome.map(inc => (
                     <div
                       key={`inc-${inc.id}`}
