@@ -13,6 +13,7 @@ import pdfUploadRouter from "./pdf-upload";
 import budgetRouter from "./budget";
 import gmailImportRouter from "./gmail-import";
 import creditCardsRouter from "./credit-cards";
+import paymentsRouter from "./payments";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(pdfUploadRouter);
 router.use(budgetRouter);
 router.use(gmailImportRouter);
 router.use(creditCardsRouter);
+router.use(paymentsRouter);
 
 export default router;

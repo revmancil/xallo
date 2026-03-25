@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import {
   useGetBillInstances,
   useUpdateBillInstance,
@@ -17,8 +17,9 @@ import { format, parseISO } from "date-fns";
 import {
   CheckCircle2, Check, History, Hash, X, Plus,
   Pencil, Trash2, Loader2, CalendarDays, FileScan,
-  Upload, AlertTriangle, Sparkles, RefreshCw, Receipt, UserPlus,
+  Upload, AlertTriangle, Sparkles, RefreshCw, Receipt, UserPlus, CreditCard,
 } from "lucide-react";
+import { PayBillModal } from "@/components/pay-bill-modal";
 import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -50,6 +51,7 @@ export default function Bills() {
   const scanFileRef = useRef<HTMLInputElement>(null);
   const [autoFillBanner, setAutoFillBanner] = useState<{ count: number; names: string[] } | null>(null);
   const [autoFilling, setAutoFilling] = useState(false);
+  const [payingBillId, setPayingBillId] = useState<number | null>(null);
 
   const { data: bills, isLoading } = useGetBillInstances();
   const { data: billers } = useGetBillers();
@@ -580,7 +582,19 @@ export default function Bills() {
           onEditSubmit={handleEditSubmit}
           onEditCancel={() => setEditForm(null)}
           onDelete={handleDelete}
+          onPay={(id) => setPayingBillId(id)}
           isPending={updateMutation.isPending || deleteMutation.isPending}
+        />
+      )}
+
+      {payingBillId !== null && (
+        <PayBillModal
+          billInstanceId={payingBillId}
+          onSuccess={() => {
+            invalidate();
+            setPayingBillId(null);
+          }}
+          onClose={() => setPayingBillId(null)}
         />
       )}
     </div>
@@ -601,6 +615,7 @@ function BillsList({
   onEditSubmit,
   onEditCancel,
   onDelete,
+  onPay,
   isPending,
 }: {
   bills: any[];
@@ -616,6 +631,7 @@ function BillsList({
   onEditSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onEditCancel: () => void;
   onDelete: (id: number) => void;
+  onPay: (id: number) => void;
   isPending: boolean;
 }) {
   if (bills.length === 0) {
@@ -684,6 +700,17 @@ function BillsList({
                     </button>
                   )}
 
+                  {/* Pay with card button */}
+                  {bill.status !== 'paid' && !isConfirming && !isEditing && (
+                    <button
+                      onClick={() => onPay(bill.id)}
+                      className="shrink-0 flex items-center gap-1.5 px-3 h-9 rounded-xl bg-primary/10 hover:bg-primary/25 text-primary border border-primary/20 hover:border-primary/40 text-xs font-semibold transition-all opacity-0 group-hover:opacity-100"
+                      title="Pay with card"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" /> Pay
+                    </button>
+                  )}
+
                   {/* Mark paid button */}
                   {bill.status !== 'paid' && !isConfirming && !isEditing && (
                     <button
@@ -694,7 +721,7 @@ function BillsList({
                           ? "bg-emerald-500 text-white scale-110 shadow-[0_0_20px_rgba(16,185,129,0.5)]"
                           : "bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/20 hover:scale-105 active:scale-95"
                       }`}
-                      title="Mark as Paid"
+                      title="Mark as Paid (manual)"
                     >
                       {isJustPaid
                         ? <Check className="w-5 h-5 animate-in zoom-in duration-200" strokeWidth={3} />
