@@ -57,14 +57,18 @@ router.post("/plaid/create-link-token", async (req, res) => {
     const response = await plaid.linkTokenCreate({
       user: { client_user_id: userId },
       client_name: "PrismClone",
-      products: [Products.Auth, Products.Transactions, Products.Liabilities],
+      products: [Products.Auth, Products.Transactions],
       country_codes: [CountryCode.Us],
       language: "en",
     });
     res.json({ link_token: response.data.link_token });
   } catch (err: any) {
-    console.error("Plaid link token error:", err?.response?.data || err);
-    res.status(500).json({ error: "Failed to create Plaid link token." });
+    const plaidError = err?.response?.data;
+    console.error("Plaid link token error:", plaidError || err);
+    const message = plaidError?.error_message
+      ? `Plaid: ${plaidError.error_message}`
+      : "Failed to create Plaid link token.";
+    res.status(500).json({ error: message, plaidErrorCode: plaidError?.error_code });
   }
 });
 
