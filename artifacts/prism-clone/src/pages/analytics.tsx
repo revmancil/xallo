@@ -30,11 +30,20 @@ function useAnalyticsSummary() {
   });
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+
+const CustomTooltipWithFuture = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
+    const isFuture = payload[0].payload.is_future;
     return (
       <div className="glass-panel px-4 py-3 rounded-xl border border-white/10 shadow-xl">
-        <p className="text-sm font-semibold text-white mb-1">{label}</p>
+        <div className="flex items-center gap-2 mb-1">
+          <p className="text-sm font-semibold text-white">{label}</p>
+          {isFuture && (
+            <span className="text-xs font-medium text-blue-300 bg-blue-500/15 border border-blue-500/20 px-1.5 py-0.5 rounded-full">
+              Forecast
+            </span>
+          )}
+        </div>
         <p className="text-primary font-display font-bold text-lg">{formatCurrency(payload[0].value)}</p>
         <p className="text-xs text-muted-foreground">{payload[0].payload.count} bill{payload[0].payload.count !== 1 ? "s" : ""}</p>
       </div>
@@ -47,12 +56,28 @@ function SpendingTrends() {
   const { data, isLoading } = useMonthlyData();
 
   const maxVal = data ? Math.max(...data.map((d: any) => toNumber(d.total) || 0)) : 0;
+  const hasFuture = data?.some((d: any) => d.is_future);
+  const hasPast = data?.some((d: any) => !d.is_future);
 
   return (
     <div className="space-y-6">
       <div className="glass-panel rounded-2xl p-6">
-        <h2 className="text-lg font-bold text-white mb-1">Monthly Bill Spending</h2>
-        <p className="text-sm text-muted-foreground mb-6">Total bills due each month over the last 6 months</p>
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
+          <div>
+            <h2 className="text-lg font-bold text-white mb-1">Monthly Bill Totals</h2>
+            <p className="text-sm text-muted-foreground">Past 3 months of history + next 2 months forecast</p>
+          </div>
+          {hasFuture && hasPast && (
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-sm bg-violet-500/60 inline-block" /> Actual
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-sm bg-blue-500/40 inline-block border border-blue-400/40 border-dashed" /> Forecast
+              </span>
+            </div>
+          )}
+        </div>
 
         {isLoading ? (
           <div className="h-64 bg-white/5 rounded-xl animate-pulse" />
@@ -77,15 +102,19 @@ function SpendingTrends() {
                 tickFormatter={(v) => `$${(v / 1000).toFixed(1)}k`}
                 width={50}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+              <Tooltip content={<CustomTooltipWithFuture />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
               <Bar dataKey="total" radius={[6, 6, 0, 0]}>
                 {data.map((entry: any, index: number) => {
-                  const isMax = toNumber(entry.total) === maxVal;
-                  const isLast = index === data.length - 1;
+                  const isFuture = entry.is_future;
+                  const isCurrentMonth = !isFuture && index === data.filter((d: any) => !d.is_future).length - 1;
+                  const isMax = !isFuture && toNumber(entry.total) === maxVal;
+                  if (isFuture) {
+                    return <Cell key={index} fill="rgba(96,165,250,0.35)" />;
+                  }
                   return (
                     <Cell
                       key={index}
-                      fill={isLast ? "url(#primaryGrad)" : isMax ? "rgba(139,92,246,0.6)" : "rgba(139,92,246,0.3)"}
+                      fill={isCurrentMonth ? "url(#primaryGrad)" : isMax ? "rgba(139,92,246,0.6)" : "rgba(139,92,246,0.3)"}
                     />
                   );
                 })}

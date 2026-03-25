@@ -13,15 +13,21 @@ function getUserId(req: any): string {
 router.get("/analytics/monthly", async (req, res) => {
   const userId = getUserId(req);
 
+  // Show 3 months back, current month, and 2 months ahead (6 total)
   const result = await db.execute(sql`
     SELECT 
       TO_CHAR(DATE_TRUNC('month', due_date::date), 'Mon YYYY') as month,
       DATE_TRUNC('month', due_date::date) as month_date,
       ROUND(SUM(amount_due::numeric), 2) as total,
-      COUNT(*)::int as count
+      COUNT(*)::int as count,
+      CASE 
+        WHEN DATE_TRUNC('month', due_date::date) > DATE_TRUNC('month', CURRENT_DATE) THEN true
+        ELSE false
+      END as is_future
     FROM bill_instances
     WHERE user_id = ${userId}
-      AND due_date >= (CURRENT_DATE - INTERVAL '5 months')::date
+      AND due_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '3 months')
+      AND due_date <  DATE_TRUNC('month', CURRENT_DATE + INTERVAL '3 months')
     GROUP BY DATE_TRUNC('month', due_date::date)
     ORDER BY month_date ASC
   `);
