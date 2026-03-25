@@ -60,7 +60,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2 mt-4">
+        <nav className="flex-1 px-4 space-y-1 mt-4 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => {
             const isActive = location === item.href;
             return (
@@ -134,13 +134,12 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
         
         <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-4 pb-28 md:pb-8 relative z-10 custom-scrollbar">
-          <AnimatePresence mode="wait">
+          <AnimatePresence initial={false}>
             <motion.div
               key={location}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.15 }}
               className="max-w-6xl mx-auto"
             >
               {children}
