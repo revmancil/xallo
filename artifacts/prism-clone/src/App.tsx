@@ -13,6 +13,7 @@ import Analytics from "./pages/analytics";
 import Security from "./pages/security";
 import Budget from "./pages/budget";
 import GmailImport from "./pages/gmail-import";
+import Transactions from "./pages/transactions";
 import NotFound from "./pages/not-found";
 
 const queryClient = new QueryClient({
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/security" component={Security} />
       <Route path="/budget" component={Budget} />
       <Route path="/gmail-import" component={GmailImport} />
+      <Route path="/transactions" component={Transactions} />
       <Route component={NotFound} />
     </Switch>
   );

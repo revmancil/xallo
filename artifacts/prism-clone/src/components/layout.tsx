@@ -13,7 +13,8 @@ import {
   PiggyBank,
   Mail,
   LogOut,
-  LogIn
+  LogIn,
+  ArrowLeftRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,6 +27,7 @@ const navItems = [
   { href: "/billers", label: "Billers", icon: Users },
   { href: "/income", label: "Income", icon: Wallet },
   { href: "/accounts", label: "Accounts", icon: Landmark },
+  { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
   { href: "/budget", label: "Budget", icon: PiggyBank },
   { href: "/analytics", label: "Analytics", icon: BarChart2 },
   { href: "/gmail-import", label: "Email Import", icon: Mail },

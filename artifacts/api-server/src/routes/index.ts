@@ -14,6 +14,7 @@ import budgetRouter from "./budget";
 import gmailImportRouter from "./gmail-import";
 import creditCardsRouter from "./credit-cards";
 import paymentsRouter from "./payments";
+import transactionsRouter from "./transactions";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(budgetRouter);
 router.use(gmailImportRouter);
 router.use(creditCardsRouter);
 router.use(paymentsRouter);
+router.use(transactionsRouter);
 
 export default router;
