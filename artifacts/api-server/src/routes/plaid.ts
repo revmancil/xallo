@@ -54,14 +54,22 @@ router.post("/plaid/create-link-token", async (req, res) => {
   }
 
   try {
+    // Optional redirect URI for OAuth institutions (AmEx, Capital One, etc.)
+    // Must be pre-registered in your Plaid developer dashboard
+    const redirectUri = process.env.PLAID_REDIRECT_URI || undefined;
+
     const response = await plaid.linkTokenCreate({
       user: { client_user_id: userId },
       client_name: "PrismClone",
       products: [Products.Auth, Products.Transactions],
       country_codes: [CountryCode.Us],
       language: "en",
+      ...(redirectUri ? { redirect_uri: redirectUri } : {}),
     });
-    res.json({ link_token: response.data.link_token });
+    res.json({
+      link_token: response.data.link_token,
+      oauthEnabled: !!redirectUri,
+    });
   } catch (err: any) {
     const plaidError = err?.response?.data;
     console.error("Plaid link token error:", plaidError || err);

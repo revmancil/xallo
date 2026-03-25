@@ -301,12 +301,21 @@ function CreditCardCard({
 
 // ─── Plaid Link ───────────────────────────────────────────────────────────────
 
+// Detect if this page load is an OAuth return from Plaid (e.g. AmEx, Capital One)
+function isOAuthReturn() {
+  return new URLSearchParams(window.location.search).has("oauth_state_id");
+}
+
 function PlaidLinkSection({ onSuccess }: { onSuccess: () => void }) {
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error" | "unconfigured">("idle");
   const [linkToken, setLinkToken] = useState<string | null>(null);
+  const [oauthEnabled, setOauthEnabled] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [linking, setLinking] = useState(false);
   const [linkedMsg, setLinkedMsg] = useState<string>("");
+
+  // receivedRedirectUri is only set when we're returning from an OAuth redirect (e.g. AmEx)
+  const receivedRedirectUri = isOAuthReturn() ? window.location.href : undefined;
 
   useEffect(() => {
     fetch(`${API_BASE}/plaid/status`)
@@ -315,6 +324,14 @@ function PlaidLinkSection({ onSuccess }: { onSuccess: () => void }) {
       .catch(() => setStatus("error"));
   }, []);
 
+  // On OAuth return: auto-fetch a link token to resume the connection
+  useEffect(() => {
+    if (receivedRedirectUri && status === "idle") {
+      fetchLinkToken();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
   const fetchLinkToken = async () => {
     setStatus("loading");
     try {
@@ -322,6 +339,7 @@ function PlaidLinkSection({ onSuccess }: { onSuccess: () => void }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to get link token");
       setLinkToken(data.link_token);
+      setOauthEnabled(!!data.oauthEnabled);
       setStatus("ready");
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to connect to Plaid.");
@@ -340,6 +358,10 @@ function PlaidLinkSection({ onSuccess }: { onSuccess: () => void }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setLinkedMsg(`Successfully linked ${metadata?.institution?.name || "your bank"} — ${data.accountsImported} account(s) imported.`);
+      // Clean OAuth params from URL after success
+      if (receivedRedirectUri) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
       onSuccess();
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to link account.");
@@ -349,17 +371,28 @@ function PlaidLinkSection({ onSuccess }: { onSuccess: () => void }) {
       setLinkToken(null);
       setStatus("idle");
     }
-  }, [onSuccess]);
+  }, [onSuccess, receivedRedirectUri]);
 
   const { open: openPlaid, ready: plaidReady } = usePlaidLink({
     token: linkToken || "",
     onSuccess: handlePlaidSuccess,
-    onExit: () => { setLinkToken(null); setStatus("idle"); },
+    onExit: () => {
+      setLinkToken(null);
+      setStatus("idle");
+      // Clean OAuth params from URL on exit
+      if (receivedRedirectUri) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    },
+    // Pass receivedRedirectUri to resume OAuth flow (AmEx, Capital One, etc.)
+    ...(receivedRedirectUri ? { receivedRedirectUri } : {}),
   });
 
   useEffect(() => {
     if (status === "ready" && plaidReady && linkToken) openPlaid();
   }, [status, plaidReady, linkToken, openPlaid]);
+
+  const showOAuthHint = !oauthEnabled && status !== "unconfigured";
 
   return (
     <div className="glass-panel rounded-2xl border border-blue-500/10 overflow-hidden">
@@ -383,10 +416,13 @@ function PlaidLinkSection({ onSuccess }: { onSuccess: () => void }) {
             disabled={status === "loading" || status === "ready" || linking}
             className="shrink-0 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl font-semibold text-sm shadow-lg shadow-blue-500/20 transition-all"
           >
-            {(status === "loading" || linking) ? <><Loader2 className="w-4 h-4 animate-spin" /> Connecting…</> : <><Link2 className="w-4 h-4" /> Link Account</>}
+            {(status === "loading" || linking)
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Connecting…</>
+              : <><Link2 className="w-4 h-4" /> Link Account</>}
           </button>
         )}
       </div>
+
       {linkedMsg && (
         <div className="flex items-center gap-2 px-4 py-3 bg-emerald-500/10 border-t border-emerald-500/20 text-sm text-emerald-300">
           <CheckCircle2 className="w-4 h-4 shrink-0" />{linkedMsg}
@@ -404,6 +440,21 @@ function PlaidLinkSection({ onSuccess }: { onSuccess: () => void }) {
           <a href="https://dashboard.plaid.com/signup" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-200">
             dashboard.plaid.com
           </a>.
+        </div>
+      )}
+
+      {/* AmEx / OAuth guidance */}
+      {showOAuthHint && (
+        <div className="px-4 py-3 bg-amber-500/5 border-t border-amber-500/10 text-xs text-amber-200/50 leading-relaxed">
+          <span className="font-semibold text-amber-300/70">American Express &amp; some banks</span> require
+          OAuth and won&apos;t appear in the list above until you enable it.{" "}
+          To fix this: set the{" "}
+          <code className="bg-black/20 px-1 rounded">PLAID_REDIRECT_URI</code> secret to your app&apos;s URL
+          (e.g.&nbsp;<code className="bg-black/20 px-1 rounded">https://yourapp.replit.app/prism-clone/accounts</code>)
+          and register that same URI in your{" "}
+          <a href="https://dashboard.plaid.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-200">
+            Plaid dashboard
+          </a>{" "}under API → Allowed redirect URIs.
         </div>
       )}
     </div>

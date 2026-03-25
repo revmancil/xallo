@@ -23,36 +23,101 @@ function makePlaidClient(): PlaidApi | null {
 
 const router = express.Router();
 
-// ─── GET /api/transactions ───────────────────────────────────────────────────
-// Aggregate transactions from:
-//  1. Plaid (live bank/CC transactions, if connected)
-//  2. Paid bill_instances (manual or Stripe-paid bills)
-// Query params: startDate, endDate, search, accountId, accountType, source
+// ─── GET /api/transactions ────────────────────────────────────────────────────
+// Aggregates: Plaid bank/CC transactions + paid bill instances
+// Query params: startDate, endDate, search, source, accountId
 router.get("/transactions", async (req, res) => {
   const userId = getUserId(req);
   const {
     startDate,
     endDate,
     search = "",
-    source = "all",   // "all" | "plaid" | "bills"
+    source = "all",
+    accountId = "",   // Plaid account_id to filter by
   } = req.query as Record<string, string>;
 
   const now = new Date();
   const defaultEnd = now.toISOString().split("T")[0];
   const defaultStart = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
+    .toISOString().split("T")[0];
   const rangeStart = startDate || defaultStart;
   const rangeEnd = endDate || defaultEnd;
 
   const transactions: any[] = [];
+  const plaidAccounts: any[] = [];   // all connected accounts with current balances
 
-  // ── 1. Paid bill instances ────────────────────────────────────────────────
-  if (source === "all" || source === "bills") {
+  // ── 1. Plaid transactions + account balances ───────────────────────────────
+  if (source === "all" || source === "plaid") {
+    const plaid = makePlaidClient();
+    if (plaid) {
+      const items = await db
+        .select()
+        .from(plaidItemsTable)
+        .where(eq(plaidItemsTable.userId, userId));
+
+      for (const item of items) {
+        try {
+          // Fetch accounts first (for name map + balances)
+          const acctResp = await plaid.accountsGet({ access_token: item.accessToken });
+          const accountMap: Record<string, { displayName: string; subtype: string; balance: number | null }> = {};
+          for (const acc of acctResp.data.accounts) {
+            const displayName = acc.name + (acc.mask ? ` ••${acc.mask}` : "");
+            const balance = acc.balances.current ?? acc.balances.available ?? null;
+            accountMap[acc.account_id] = { displayName, subtype: acc.subtype || "bank", balance };
+            plaidAccounts.push({
+              id: acc.account_id,
+              name: displayName,
+              officialName: acc.official_name || null,
+              subtype: acc.subtype || "bank",
+              type: acc.type,
+              balance,
+              institutionName: item.institutionName || "Bank",
+            });
+          }
+
+          // Fetch transactions
+          const txResp = await plaid.transactionsGet({
+            access_token: item.accessToken,
+            start_date: rangeStart,
+            end_date: rangeEnd,
+          });
+
+          for (const tx of txResp.data.transactions) {
+            // Account-level filter
+            if (accountId && tx.account_id !== accountId) continue;
+
+            const name = tx.merchant_name || tx.name || "Transaction";
+            if (search && !name.toLowerCase().includes(search.toLowerCase())) continue;
+
+            const acctInfo = accountMap[tx.account_id];
+            transactions.push({
+              id: `plaid-${tx.transaction_id}`,
+              source: "plaid",
+              date: tx.date,
+              name,
+              category: tx.personal_finance_category?.primary
+                ? toTitleCase(tx.personal_finance_category.primary.replace(/_/g, " "))
+                : (tx.category?.[0] || "Other"),
+              amount: -tx.amount,   // Plaid: positive = debit; negate so debits are negative
+              plaidAccountId: tx.account_id,
+              accountName: acctInfo?.displayName ?? tx.account_id,
+              accountType: acctInfo?.subtype ?? "bank",
+              pending: tx.pending,
+              logo: tx.logo_url || null,
+            });
+          }
+        } catch {
+          // Skip failed items silently
+        }
+      }
+    }
+  }
+
+  // ── 2. Paid bill instances ─────────────────────────────────────────────────
+  if ((source === "all" || source === "bills") && !accountId) {
     const paid = await db
       .select({
         id: billInstancesTable.id,
-        billerId: billInstancesTable.billerId,
         amountDue: billInstancesTable.amountDue,
         dueDate: billInstancesTable.dueDate,
         paidAt: billInstancesTable.paidAt,
@@ -86,6 +151,7 @@ router.get("/transactions", async (req, res) => {
         name,
         category: row.billerCategory || "Bills",
         amount: -Math.abs(parseFloat(row.amountDue as string || "0")),
+        plaidAccountId: null,
         accountName: "Bill Payment",
         accountType: "bill",
         confirmationNumber: row.confirmationNumber || null,
@@ -94,64 +160,7 @@ router.get("/transactions", async (req, res) => {
     }
   }
 
-  // ── 2. Plaid transactions ─────────────────────────────────────────────────
-  if (source === "all" || source === "plaid") {
-    const plaid = makePlaidClient();
-    if (plaid) {
-      const items = await db
-        .select()
-        .from(plaidItemsTable)
-        .where(eq(plaidItemsTable.userId, userId));
-
-      for (const item of items) {
-        try {
-          const resp = await plaid.transactionsGet({
-            access_token: item.accessToken,
-            start_date: rangeStart,
-            end_date: rangeEnd,
-          });
-          for (const tx of resp.data.transactions) {
-            const name = tx.merchant_name || tx.name || "Transaction";
-            if (search && !name.toLowerCase().includes(search.toLowerCase())) continue;
-            transactions.push({
-              id: `plaid-${tx.transaction_id}`,
-              source: "plaid",
-              date: tx.date,
-              name,
-              category: tx.personal_finance_category?.primary
-                ? toTitleCase(tx.personal_finance_category.primary.replace(/_/g, " "))
-                : (tx.category?.[0] || "Other"),
-              amount: -tx.amount,          // Plaid: positive = debit, so negate
-              accountName: tx.account_id,  // resolved below if possible
-              accountType: "bank",
-              pending: tx.pending,
-              logo: tx.logo_url || null,
-            });
-          }
-
-          // Resolve account names from Plaid account IDs
-          const accountsResp = await plaid.accountsGet({ access_token: item.accessToken });
-          const accountMap: Record<string, string> = {};
-          for (const acc of accountsResp.data.accounts) {
-            accountMap[acc.account_id] = acc.name + (acc.mask ? ` ••${acc.mask}` : "");
-          }
-          // Patch account names
-          for (const tx of transactions) {
-            if (tx.source === "plaid" && accountMap[tx.accountName]) {
-              tx.accountName = accountMap[tx.accountName];
-              tx.accountType = accountsResp.data.accounts.find(
-                (a: any) => a.name + (a.mask ? ` ••${a.mask}` : "") === tx.accountName
-              )?.subtype || "bank";
-            }
-          }
-        } catch {
-          // Skip failed items silently
-        }
-      }
-    }
-  }
-
-  // Sort by date descending, then by id for stability
+  // Sort newest → oldest
   transactions.sort((a, b) => {
     if (b.date !== a.date) return b.date.localeCompare(a.date);
     return a.id.localeCompare(b.id);
@@ -165,8 +174,8 @@ router.get("/transactions", async (req, res) => {
     else totalCredits += tx.amount;
   }
 
-  // Fetch accounts for filter panel
-  const bankAccounts = await db
+  // Fetch manual bank accounts & credit cards for filter panel
+  const manualBankAccounts = await db
     .select()
     .from(bankAccountsTable)
     .where(eq(bankAccountsTable.userId, userId));
@@ -176,8 +185,16 @@ router.get("/transactions", async (req, res) => {
     .from(creditCardsTable)
     .where(eq(creditCardsTable.userId, userId));
 
+  // If filtering by account, attach current balance for running balance calc
+  let filterAccountBalance: number | null = null;
+  if (accountId) {
+    const acct = plaidAccounts.find(a => a.id === accountId);
+    filterAccountBalance = acct?.balance ?? null;
+  }
+
   res.json({
     transactions,
+    filterAccountBalance,
     summary: {
       totalSpent: Math.abs(totalDebits),
       totalIncome: totalCredits,
@@ -185,14 +202,15 @@ router.get("/transactions", async (req, res) => {
       count: transactions.length,
     },
     accounts: {
-      bank: bankAccounts,
+      plaid: plaidAccounts,
+      bank: manualBankAccounts,
       creditCards,
     },
   });
 });
 
 function toTitleCase(str: string) {
-  return str.replace(/\w\S*/g, (txt) => txt[0].toUpperCase() + txt.slice(1).toLowerCase());
+  return str.replace(/\w\S*/g, txt => txt[0].toUpperCase() + txt.slice(1).toLowerCase());
 }
 
 export default router;
