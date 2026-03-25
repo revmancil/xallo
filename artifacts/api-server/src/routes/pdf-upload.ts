@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import multer from "multer";
 // Import from lib path to avoid pdf-parse v1's test init code at startup
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
@@ -82,7 +82,21 @@ function extractBillData(text: string): { amountDue: number | null; dueDate: str
   return { amountDue, dueDate, billerHint };
 }
 
-router.post("/pdf/parse", upload.single("file"), async (req: any, res) => {
+// Wrap multer so its errors are caught as JSON instead of Express HTML pages
+function uploadMiddleware(req: Request, res: Response, next: NextFunction) {
+  upload.single("file")(req, res, (err) => {
+    if (err) {
+      const msg = err instanceof multer.MulterError
+        ? `Upload error: ${err.message}`
+        : err.message || "Failed to receive the uploaded file. The file may be too large or the upload was interrupted.";
+      res.status(400).json({ error: msg });
+      return;
+    }
+    next();
+  });
+}
+
+router.post("/pdf/parse", uploadMiddleware, async (req: any, res) => {
   const userId = getUserId(req);
 
   if (!req.file) {

@@ -57,11 +57,8 @@ router.get("/billers", async (req, res) => {
 
 router.post("/billers", async (req, res) => {
   const userId = getUserId(req);
-  console.log("[billers POST] content-type:", req.headers["content-type"]);
-  console.log("[billers POST] body:", JSON.stringify(req.body));
   const parsed = parseCreateBody(req.body);
   if ("error" in parsed) {
-    console.log("[billers POST] validation error:", parsed.error);
     res.status(400).json({ error: parsed.error });
     return;
   }

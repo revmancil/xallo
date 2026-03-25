@@ -131,8 +131,13 @@ export default function Bills() {
     fd.append("file", file);
     try {
       const res = await fetch(`${API_BASE}/pdf/parse`, { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      let data: any;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("The server returned an unexpected response. The file may be too large or the upload was interrupted.");
+      }
+      if (!res.ok) throw new Error(data?.error || `Upload failed (${res.status})`);
       setScanResult(data);
     } catch (e: any) {
       setScanError(e.message || "Failed to parse PDF.");

@@ -32,10 +32,13 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Fallback: if no body parser ran (e.g. proxy stripped Content-Type),
-// read the raw stream and attempt JSON parsing.
+// Fallback: if no body parser ran AND there is no Content-Type header at all
+// (e.g. a proxy stripped it), read the raw stream and attempt JSON parsing.
+// IMPORTANT: Skip when Content-Type exists — that covers multipart/form-data
+// uploads (used by PDF scanner) which must not have their stream consumed here.
 app.use((req: Request, _res: Response, next: NextFunction) => {
-  if (req.body !== undefined || !["POST", "PUT", "PATCH"].includes(req.method)) {
+  const hasContentType = !!req.headers["content-type"];
+  if (req.body !== undefined || hasContentType || !["POST", "PUT", "PATCH"].includes(req.method)) {
     return next();
   }
   const chunks: Buffer[] = [];
