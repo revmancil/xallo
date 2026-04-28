@@ -1,0 +1,60 @@
+# Build prism-clone and publish to GitHub Pages (project site: /<repo>/).
+# After merge: Repo Settings → Pages → Build and deployment → Source: GitHub Actions.
+name: GitHub Pages
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        env:
+          # Project Pages URL is https://<user>.github.io/<repo>/
+          BASE_PATH: /${{ github.event.repository.name }}/
+        run: pnpm --filter @workspace/prism-clone run build
+
+      # GitHub Pages has no rewrite rules; 404.html is served for unknown paths (SPA refresh/deep links).
+      - name: SPA fallback (404.html)
+        run: cp artifacts/prism-clone/dist/public/index.html artifacts/prism-clone/dist/public/404.html
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: artifacts/prism-clone/dist/public
+          include-hidden-files: true
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
