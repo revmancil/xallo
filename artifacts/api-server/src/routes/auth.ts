@@ -10,6 +10,7 @@ import { db, usersTable } from "@workspace/db";
 import {
   clearSession,
   getOidcConfig,
+  getOidcClientId,
   getSessionId,
   createSession,
   deleteSession,
@@ -206,7 +207,7 @@ router.get("/logout", async (req: Request, res: Response) => {
   await clearSession(res, sid);
 
   const endSessionUrl = oidc.buildEndSessionUrl(config, {
-    client_id: process.env.REPL_ID!,
+    client_id: getOidcClientId(),
     post_logout_redirect_uri: origin,
   });
 

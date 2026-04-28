@@ -9,6 +9,15 @@ export const ISSUER_URL = process.env.ISSUER_URL ?? "https://replit.com/oidc";
 export const SESSION_COOKIE = "sid";
 export const SESSION_TTL = 7 * 24 * 60 * 60 * 1000;
 
+/** Replit OIDC client id; set `OIDC_CLIENT_ID` on non-Replit hosts (same value as in Replit). */
+export function getOidcClientId(): string {
+  return (
+    process.env.OIDC_CLIENT_ID?.trim() ||
+    process.env.REPL_ID?.trim() ||
+    ""
+  );
+}
+
 export interface SessionData {
   user: AuthUser;
   access_token: string;
@@ -20,10 +29,13 @@ let oidcConfig: client.Configuration | null = null;
 
 export async function getOidcConfig(): Promise<client.Configuration> {
   if (!oidcConfig) {
-    oidcConfig = await client.discovery(
-      new URL(ISSUER_URL),
-      process.env.REPL_ID!,
-    );
+    const clientId = getOidcClientId();
+    if (!clientId) {
+      throw new Error(
+        "OIDC_CLIENT_ID or REPL_ID must be set for Replit OIDC (login / session refresh).",
+      );
+    }
+    oidcConfig = await client.discovery(new URL(ISSUER_URL), clientId);
   }
   return oidcConfig;
 }

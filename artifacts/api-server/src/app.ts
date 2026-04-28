@@ -6,6 +6,7 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 import { authMiddleware } from "./middlewares/authMiddleware";
 import { WebhookHandlers } from "./webhookHandlers";
+import { mountPrismStaticIfConfigured } from "./mountPrismStatic";
 
 const app: Express = express();
 
@@ -87,5 +88,7 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 app.use(authMiddleware);
 
 app.use("/api", router);
+
+mountPrismStaticIfConfigured(app);
 
 export default app;
