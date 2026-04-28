@@ -7,7 +7,7 @@ import { formatCurrency, toNumber } from "@/lib/utils";
 import { BillerIcon } from "@/components/biller-icon";
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, BarChart2, Star } from "lucide-react";
 
-const API_BASE = import.meta.env.BASE_URL + "api";
+import { API_BASE } from "@/lib/api-base";
 
 function useMonthlyData() {
   return useQuery({

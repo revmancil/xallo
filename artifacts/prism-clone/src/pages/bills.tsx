@@ -23,7 +23,7 @@ import { PayBillModal } from "@/components/pay-bill-modal";
 import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-const API_BASE = import.meta.env.BASE_URL + "api";
+import { API_BASE } from "@/lib/api-base";
 
 type ConfirmDialog = { billId: number; confirmationNumber: string };
 type EditForm = { billId: number; amountDue: string; dueDate: string; status: string };

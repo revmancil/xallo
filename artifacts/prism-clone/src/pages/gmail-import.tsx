@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
-const API_BASE = import.meta.env.BASE_URL + "api";
+import { API_BASE } from "@/lib/api-base";
 
 type EmailImport = {
   id: number;

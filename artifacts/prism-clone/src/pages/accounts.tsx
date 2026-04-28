@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getGetAccountsQueryKey, getGetDashboardSummaryQueryKey } from "@workspace/api-client-react";
 import { usePlaidLink } from "react-plaid-link";
 
-const API_BASE = import.meta.env.BASE_URL + "api";
+import { API_BASE } from "@/lib/api-base";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

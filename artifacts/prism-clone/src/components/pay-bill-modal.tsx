@@ -9,7 +9,7 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { X, CreditCard, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 
-const API_BASE = import.meta.env.BASE_URL + "api";
+import { API_BASE } from "@/lib/api-base";
 
 // Load Stripe publishable key once
 let stripePromise: ReturnType<typeof loadStripe> | null = null;

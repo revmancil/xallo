@@ -3,6 +3,32 @@ import type { AuthUser } from "@workspace/api-client-react";
 
 export type { AuthUser };
 
+/** When set (e.g. from VITE_API_BASE_URL), auth routes hit this origin; otherwise paths use Vite BASE_URL. */
+let externalApiOrigin: string | undefined;
+
+export function setExternalApiOrigin(origin: string | undefined): void {
+  externalApiOrigin = origin?.trim().replace(/\/+$/, "") || undefined;
+}
+
+function appBasePath(): string {
+  const base = String(import.meta.env.BASE_URL ?? "/");
+  if (base === "/") return "";
+  return base.replace(/\/+$/, "");
+}
+
+function apiUrl(path: string): string {
+  if (externalApiOrigin) {
+    return `${externalApiOrigin}${path}`;
+  }
+  const prefix = appBasePath();
+  return `${prefix}${path}`;
+}
+
+function loginReturnTo(): string {
+  const p = appBasePath();
+  return `${window.location.origin}${p === "" ? "" : p}`;
+}
+
 interface AuthState {
   user: AuthUser | null;
   isLoading: boolean;
@@ -18,7 +44,7 @@ export function useAuth(): AuthState {
   useEffect(() => {
     let cancelled = false;
 
-    fetch("/api/auth/user", { credentials: "include" })
+    fetch(apiUrl("/api/auth/user"), { credentials: "include" })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json() as Promise<{ user: AuthUser | null }>;
@@ -42,12 +68,12 @@ export function useAuth(): AuthState {
   }, []);
 
   const login = useCallback(() => {
-    const base = import.meta.env.BASE_URL.replace(/\/+$/, "") || "/";
-    window.location.href = `/api/login?returnTo=${encodeURIComponent(base)}`;
+    const returnTo = loginReturnTo();
+    window.location.href = `${apiUrl("/api/login")}?returnTo=${encodeURIComponent(returnTo)}`;
   }, []);
 
   const logout = useCallback(() => {
-    window.location.href = "/api/logout";
+    window.location.href = apiUrl("/api/logout");
   }, []);
 
   return {

@@ -8,7 +8,7 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
-const API_BASE = import.meta.env.BASE_URL + "api";
+import { API_BASE } from "@/lib/api-base";
 
 type Transaction = {
   id: string;

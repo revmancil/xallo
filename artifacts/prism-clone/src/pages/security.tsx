@@ -10,7 +10,7 @@ import { formatCurrency, toNumber } from "@/lib/utils";
 import { useGetBillers, useCreateBillInstance } from "@workspace/api-client-react";
 import { getGetBillInstancesQueryKey, getGetDashboardSummaryQueryKey } from "@workspace/api-client-react";
 
-const API_BASE = import.meta.env.BASE_URL + "api";
+import { API_BASE } from "@/lib/api-base";
 
 function useSecurityLogs() {
   return useQuery({

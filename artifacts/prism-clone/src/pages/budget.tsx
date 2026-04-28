@@ -4,7 +4,7 @@ import { formatCurrency, toNumber, cn } from "@/lib/utils";
 import { PlusCircle, Pencil, Trash2, ChevronLeft, ChevronRight, PiggyBank, AlertTriangle, CheckCircle2, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const API_BASE = import.meta.env.BASE_URL + "api";
+import { API_BASE } from "@/lib/api-base";
 
 const CATEGORIES = [
   "Housing",
