@@ -30,6 +30,27 @@ export function setBaseUrl(url: string | null): void {
 }
 
 /**
+ * `origin` + Vite public path for same-host API calls. When `import.meta.env.BASE_URL` is `/`
+ * but the app is served under `/<repo>/` on `*.github.io`, infers that segment from
+ * `location.pathname` so `/api/...` does not become `https://<host>/api/...`.
+ */
+export function resolveBrowserApiOrigin(): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+  const origin = window.location.origin;
+  let prefix = String(import.meta.env.BASE_URL ?? "/").replace(/\/+$/, "");
+  if (
+    prefix === "" &&
+    window.location.hostname.toLowerCase().endsWith("github.io")
+  ) {
+    const seg = window.location.pathname.split("/").filter(Boolean)[0];
+    if (seg) prefix = `/${seg}`;
+  }
+  return `${origin}${prefix}`;
+}
+
+/**
  * Register a getter that supplies a bearer auth token.  Before every fetch
  * the getter is invoked; when it returns a non-null string, an
  * `Authorization: Bearer <token>` header is attached to the request.

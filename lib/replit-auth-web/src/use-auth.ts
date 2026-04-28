@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import type { AuthUser } from "@workspace/api-client-react";
+import { resolveBrowserApiOrigin, type AuthUser } from "@workspace/api-client-react";
 
 export type { AuthUser };
 
@@ -10,23 +10,15 @@ export function setExternalApiOrigin(origin: string | undefined): void {
   externalApiOrigin = origin?.trim().replace(/\/+$/, "") || undefined;
 }
 
-function appBasePath(): string {
-  const base = String(import.meta.env.BASE_URL ?? "/");
-  if (base === "/") return "";
-  return base.replace(/\/+$/, "");
-}
-
 function apiUrl(path: string): string {
   if (externalApiOrigin) {
     return `${externalApiOrigin}${path}`;
   }
-  const prefix = appBasePath();
-  return `${prefix}${path}`;
+  return `${resolveBrowserApiOrigin()}${path}`;
 }
 
 function loginReturnTo(): string {
-  const p = appBasePath();
-  return `${window.location.origin}${p === "" ? "" : p}`;
+  return resolveBrowserApiOrigin();
 }
 
 interface AuthState {

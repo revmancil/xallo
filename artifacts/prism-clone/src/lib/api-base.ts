@@ -1,3 +1,5 @@
+import { resolveBrowserApiOrigin } from "@workspace/api-client-react";
+
 /**
  * API origin for @workspace/api-client-react setBaseUrl (paths are /api/...).
  * Set VITE_API_BASE_URL when the UI is static (e.g. GitHub Pages) and the API is elsewhere.
@@ -10,10 +12,13 @@ export function getApiOriginOverride(): string | undefined {
   return s || undefined;
 }
 
-/** Base URL for raw fetch calls (includes trailing .../api, no trailing slash). */
+/** Base URL for raw fetch calls (…/api, no trailing slash). */
 export const API_BASE: string = (() => {
   const origin = getApiOriginOverride();
   if (origin) return `${origin}/api`;
+  if (typeof window !== "undefined") {
+    return `${resolveBrowserApiOrigin()}/api`;
+  }
   const pathBase = String(import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
   return pathBase ? `${pathBase}/api` : "/api";
 })();
