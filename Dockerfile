@@ -12,7 +12,6 @@ COPY lib ./lib
 COPY artifacts ./artifacts
 COPY scripts ./scripts
 
-ENV NODE_ENV=production
 ENV BASE_PATH=/
 ENV PORT=8080
 
@@ -22,6 +21,7 @@ RUN pnpm install --frozen-lockfile \
   && cp -r artifacts/prism-clone/dist/public/* /app/prism-static/ \
   && pnpm --filter @workspace/api-server run build
 
+ENV NODE_ENV=production
 ENV PRISM_STATIC_ROOT=/app/prism-static
 
 WORKDIR /app/artifacts/api-server
